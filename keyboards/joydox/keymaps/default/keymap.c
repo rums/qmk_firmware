@@ -50,9 +50,9 @@ enum custom_keycodes {
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK] = LAYOUT(
-        KC_1,  KC_2, KC_3, KC_4, KC_5,                                      JS_BUTTON9, JS_BUTTON5, JS_BUTTON1, JS_BUTTON2, TO(_COLEMAK),
-        JS_BUTTON4,  JS_BUTTON5,  JS_BUTTON6,  JS_BUTTON7,  JS_BUTTON10,    JS_BUTTON11,  JS_BUTTON0, JS_BUTTON1, JS_BUTTON2, JS_BUTTON3,
-        JS_BUTTON16, JS_BUTTON14, JS_BUTTON15, JS_BUTTON6, JS_BUTTON8,     JS_BUTTON8,  WD, JS_BUTTON12, JS_BUTTON13, JS_BUTTON11,
+        KC_1,  KC_2, KC_3, KC_4, KC_5,                                      JS_BUTTON20, JS_BUTTON21, JS_BUTTON22, JS_BUTTON23, TO(_COLEMAK),
+        JS_BUTTON0, JS_BUTTON1, JS_BUTTON2, JS_BUTTON3, JS_BUTTON4,         JS_BUTTON5,  JS_BUTTON6, JS_BUTTON7, JS_BUTTON8, JS_BUTTON9,
+        JS_BUTTON10, JS_BUTTON11, JS_BUTTON12, JS_BUTTON13, JS_BUTTON14,    JS_BUTTON15, WD, JS_BUTTON17, JS_BUTTON18, JS_BUTTON19,
                                   KC_5, KC_6,                                            KC_7, KC_8
     ),
     [_COLEMAK] = LAYOUT(
@@ -105,9 +105,14 @@ uint8_t scanJoystick(int8_t joystickAddr, uint8_t axis1, uint8_t axis2) {
         if (horizontalMsb == I2C_STATUS_SUCCESS && horizontalLsb == I2C_STATUS_SUCCESS && verticalMsb == I2C_STATUS_SUCCESS && verticalLsb == I2C_STATUS_SUCCESS && buttonCurrent == I2C_STATUS_SUCCESS && buttonFresh == I2C_STATUS_SUCCESS) {
             int8_t horizontal = horizontalMsbData - 128;
             int8_t vertical = verticalMsbData - 128;
-            joystick_status.axes[axis1] = horizontal;
-            joystick_status.axes[axis2] = vertical;
-            joystick_status.status |= JS_UPDATED;
+            if (joystick_status.axes[axis1] != horizontal) {
+                joystick_status.axes[axis1] = horizontal;
+                joystick_status.status |= JS_UPDATED;
+            }
+            if (joystick_status.axes[axis2] != vertical) {
+                joystick_status.axes[axis2] = vertical;
+                joystick_status.status |= JS_UPDATED;
+            }
         } else {
             dprintf("  Error: %d %d %d %d %d %d\n", horizontalMsb, horizontalLsb, verticalMsb, verticalLsb, buttonCurrent, buttonFresh);
         }
