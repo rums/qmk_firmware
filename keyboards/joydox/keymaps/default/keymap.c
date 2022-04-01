@@ -16,6 +16,7 @@
 #include QMK_KEYBOARD_H
 #include "joystick.h"
 #include "i2c_master.h"
+#include "analog.h"
 
 #define TIMEOUT 50
 
@@ -52,14 +53,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK] = LAYOUT(
         KC_1,  KC_2, KC_3, KC_4, KC_5,                                      JS_BUTTON20, JS_BUTTON21, JS_BUTTON22, JS_BUTTON23, TO(_COLEMAK),
         JS_BUTTON0, JS_BUTTON1, JS_BUTTON2, JS_BUTTON3, JS_BUTTON4,         JS_BUTTON5,  JS_BUTTON6, JS_BUTTON7, JS_BUTTON8, JS_BUTTON9,
-        JS_BUTTON10, JS_BUTTON11, JS_BUTTON12, JS_BUTTON13, JS_BUTTON14,    JS_BUTTON15, WD, JS_BUTTON17, JS_BUTTON18, JS_BUTTON19,
-                                  KC_5, KC_6,                                            KC_7, KC_8
+        JS_BUTTON10, JS_BUTTON11, JS_BUTTON12, WD, JS_BUTTON14,             JS_BUTTON15, WD, JS_BUTTON17, JS_BUTTON18, JS_BUTTON19,
+                                  JS_BUTTON24, JS_BUTTON25,                                            JS_BUTTON26, JS_BUTTON27
     ),
     [_COLEMAK] = LAYOUT(
         KC_Q, KC_W, KC_F, KC_P, KC_B,   KC_J, KC_L, KC_U, KC_Y, TO(_JOYSTICK),
         KC_A, KC_R, KC_S, KC_T, KC_G,   KC_M, KC_N, KC_E, KC_I, KC_O,
-        KC_Z, KC_X, KC_C, KC_D, KC_V,   KC_K, KC_H, KC_COMM, KC_DOT, RESET,
-                    KC_5, KC_SPACE,               KC_ENTER, KC_8
+        MT(MOD_LCTL, KC_Z), KC_X, KC_C, KC_D, KC_V,   KC_K, KC_H, KC_COMM, KC_DOT, MT(MOD_LALT, KC_SLASH),
+                    KC_LSHIFT, KC_SPC,               KC_ENTER, RESET
     )
 };
 
@@ -67,7 +68,9 @@ joystick_config_t joystick_axes[JOYSTICK_AXES_COUNT] = {
     [0] = JOYSTICK_AXIS_VIRTUAL,
     [1] = JOYSTICK_AXIS_VIRTUAL,
     [2] = JOYSTICK_AXIS_VIRTUAL,
-    [3] = JOYSTICK_AXIS_VIRTUAL
+    [3] = JOYSTICK_AXIS_VIRTUAL,
+    [4] = JOYSTICK_AXIS_VIRTUAL,
+    [5] = JOYSTICK_AXIS_VIRTUAL
 };
 
 // static uint8_t axesFlags = 0;
@@ -81,6 +84,7 @@ enum axes {
 
 #define QWIIC_JOYSTICK_LEFT_ADDR (0x20 << 1)
 #define QWIIC_JOYSTICK_RIGHT_ADDR (0x24 << 1)
+#define QWIIC_TRIGGER_LEFT_ADDR (0x64 << 1)
 
 uint8_t scanJoystick(int8_t joystickAddr, uint8_t axis1, uint8_t axis2) {
     uint8_t nDevices = 0;
@@ -123,6 +127,33 @@ uint8_t scanJoystick(int8_t joystickAddr, uint8_t axis1, uint8_t axis2) {
     return nDevices;
 }
 
+// uint8_t scanTrigger(int8_t joystickAddr, uint8_t axis1, uint8_t axis2) {
+//     uint8_t nDevices = 0;
+//     i2c_status_t error = i2c_start(joystickAddr, TIMEOUT);
+//     if (error == I2C_STATUS_SUCCESS) {
+//         i2c_stop();
+//         // registers 3 and 4 are current horizontal position (MSB first)
+//         // registers 5 and 6 are current vertical position (MSB first)
+//         // registers 7 and 8 are current button state (7 is current position, 8 is if button was pressed since last read of button state)
+//         uint8_t rawData = 0;
+//         i2c_status_t rawAnalog = i2c_readReg(joystickAddr, 3, &rawData, sizeof(rawData), TIMEOUT);
+//         if (rawAnalog == I2C_STATUS_SUCCESS) {
+//             int8_t raw = rawData - 128;
+//             if (joystick_status.axes[axis1] != raw) {
+//                 joystick_status.axes[axis1] = raw;
+//                 joystick_status.status |= JS_UPDATED;
+//             }
+//             dprintf("  Analog: %d\n", joystick_status.axes[axis1]);
+//         } else {
+//             dprintf("  Error: %d\n", rawAnalog);
+//         }
+//         nDevices++;
+//     } else {
+//         dprintf("  Unknown error (%u) at address 0x%02X\n", error, joystickAddr);
+//     }
+//     return nDevices;
+// }
+
 #ifdef USE_SLIDER
 #define QWIIC_SLIDER_ADDR (0x28 << 1)
 void scanSlider(void) {
@@ -148,7 +179,7 @@ void scanSlider(void) {
 }
 #endif // USE_SLIDER
 
-void do_scan(void) {
+void scanJoysticks(void) {
     uint8_t nDevices = 0;
 
     nDevices += scanJoystick(QWIIC_JOYSTICK_LEFT_ADDR, 0, 1);
@@ -163,30 +194,70 @@ void do_scan(void) {
 
 uint16_t scan_timer = 0;
 
-// void matrix_scan_user(void) {
-    // /* joystick stuff */
-    // int16_t val = (((uint32_t)timer_read() % 5000 - 2500) * 255) / 5000;
-
-    // if (val != joystick_status.axes[0]) {
-    //     joystick_status.axes[0] = val;
-    //     joystick_status.status |= JS_UPDATED;
-    // }
-// }
-
-// void joystick_task(void) {
-//     /* analog stuff */
-//     if (timer_elapsed(scan_timer) > 100) {
-//         do_scan();
-//         scan_timer = timer_read();
-//     }
-//     if (joystick_status.status & JS_UPDATED) {
-//         send_joystick_packet(&joystick_status);
-//         joystick_status.status &= ~JS_UPDATED;
-//     }
-// }
+#define RIGHT_TRIGGER_ZERO 516
+void scanTriggers(void) {
+    bool jsUpdated = false;
+    int32_t rawVal = analogReadPin(F4);
+    if (rawVal > RIGHT_TRIGGER_ZERO + 1) {
+        // map rawVal to rangedVal between 0 and 127
+        double slope = 1.0 * (127 - 0) / (1027 - 528);
+        int16_t rangedVal = slope * (rawVal - 528) + 0;
+        if (!(joystick_status.buttons[(JS_BUTTON0 - JS_BUTTON0) / 8] & (1 << (JS_BUTTON0 % 8)))) {
+            if (joystick_status.axes[5] != 0 || joystick_status.axes[4] != rangedVal) {
+                joystick_status.axes[5] = 0;
+                joystick_status.axes[4] = rangedVal;
+                jsUpdated = true;
+            }
+        }
+        else {
+            if (joystick_status.axes[4] != 0 || joystick_status.axes[5] != rangedVal) {
+                joystick_status.axes[4] = 0;
+                joystick_status.axes[5] = rangedVal;
+                jsUpdated = true;
+            }
+        }
+        }
+    else if (rawVal < RIGHT_TRIGGER_ZERO - 1) {
+        // map rawVal to rangedVal from (508, 0) to (0, 127)
+        double slope = 1.0 * (0 - 127) / (508 - 0);
+        int16_t rangedVal = slope * (rawVal - 508) + 0;
+        // if rangedVal is within 4 of 127, set it to 127
+        if (rangedVal > 127 - 4) {
+            rangedVal = 127;
+        }
+        if (rangedVal != joystick_status.axes[5]) {
+            joystick_status.axes[5] = rangedVal;
+            jsUpdated = true;
+        }
+    }
+    else {
+        // set both axes to 0
+        int16_t rangedVal = 0;
+        if (rangedVal != joystick_status.axes[4]) {
+            joystick_status.axes[4] = rangedVal;
+            jsUpdated = true;
+        }
+        if (rangedVal != joystick_status.axes[5]) {
+            joystick_status.axes[5] = rangedVal;
+            jsUpdated = true;
+        }
+    }
+    if (jsUpdated) {
+        joystick_status.status |= JS_UPDATED;
+    }
+    #ifdef CONSOLE_ENABLE
+    if (timer_elapsed(scan_timer) > 200) {
+        uprintf("rawVal: %d\n", rawVal);
+        uprintf("axis 4: %d\n", joystick_status.axes[4]);
+        uprintf("axis 5: %d\n", joystick_status.axes[5]);
+        scan_timer = timer_read();
+    }
+    #endif
+}
 
 bool process_joystick_analogread() {
-    do_scan();
+    scanJoysticks();
+    scanTriggers();
     return true;
 }
 
