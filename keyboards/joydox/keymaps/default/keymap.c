@@ -37,30 +37,48 @@ i2c_status_t i2c_start_bodge(uint8_t address, uint16_t timeout) {
 
 // Defines names for use in layer keycodes and the keymap
 enum layer_names {
-    _JOYSTICK,
-    _COLEMAK
+    _JOYSTICK_RL,
+    _JOYSTICK_VANILLA
 };
 
 // Defines the ke
 // ycodes used by our macros in process_record_user
 enum custom_keycodes {
-    JOYSTICK = SAFE_RANGE,
-    COLEMAK,
+    JOYSTICK_RL = SAFE_RANGE,
+    JOYSTICK_VANILLA,
     WD
 };
 
+enum controller_mappings {
+    XBOX_A = JS_BUTTON3,
+    XBOX_B = JS_BUTTON19,
+    XBOX_X = JS_BUTTON7,
+    XBOX_Y = JS_BUTTON9,
+    XBOX_LB = JS_BUTTON2,
+    XBOX_RB = JS_BUTTON4,
+    XBOX_BACK = JS_BUTTON10,
+    XBOX_START = JS_BUTTON14,
+    XBOX_LS = JS_BUTTON1,
+    XBOX_RS = JS_BUTTON8,
+    XBOX_UP = JS_BUTTON17,
+    XBOX_DOWN = JS_BUTTON18,
+    XBOX_LEFT = JS_BUTTON11,
+    XBOX_RIGHT = JS_BUTTON12,
+    XBOX_LT_TOG = JS_BUTTON31
+};
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    [_JOYSTICK] = LAYOUT(
-        KC_1,  KC_2, KC_3, KC_4, KC_5,                                      JS_BUTTON20, JS_BUTTON21, JS_BUTTON22, JS_BUTTON23, TO(_COLEMAK),
-        JS_BUTTON0, JS_BUTTON1, JS_BUTTON2, JS_BUTTON3, JS_BUTTON4,         JS_BUTTON5,  JS_BUTTON6, JS_BUTTON7, JS_BUTTON8, JS_BUTTON9,
-        JS_BUTTON10, JS_BUTTON11, JS_BUTTON12, WD, JS_BUTTON14,             JS_BUTTON15, WD, JS_BUTTON17, JS_BUTTON18, JS_BUTTON19,
-                                  JS_BUTTON24, JS_BUTTON25,                                            JS_BUTTON26, JS_BUTTON27
+    [_JOYSTICK_RL] = LAYOUT(
+        KC_1,        KC_2,        KC_3,       KC_4,   KC_5,                 JS_BUTTON22, JS_BUTTON23, TO(_JOYSTICK_VANILLA),
+        XBOX_LT_TOG, XBOX_LS,     XBOX_LB,    XBOX_A, XBOX_RB,              XBOX_X,      XBOX_RS,     XBOX_Y,
+        XBOX_BACK,   XBOX_LEFT,   XBOX_RIGHT, WD,     XBOX_START,          XBOX_UP,     XBOX_DOWN,   XBOX_B,
+                     JS_BUTTON24, JS_BUTTON25,                                           JS_BUTTON26, JS_BUTTON27
     ),
-    [_COLEMAK] = LAYOUT(
-        KC_Q, KC_W, KC_F, KC_P, KC_B,   KC_J, KC_L, KC_U, KC_Y, TO(_JOYSTICK),
-        KC_A, KC_R, KC_S, KC_T, KC_G,   KC_M, KC_N, KC_E, KC_I, KC_O,
-        MT(MOD_LCTL, KC_Z), KC_X, KC_C, KC_D, KC_V,   KC_K, KC_H, KC_COMM, KC_DOT, MT(MOD_LALT, KC_SLASH),
-                    KC_LSHIFT, KC_SPC,               KC_ENTER, RESET
+    [_JOYSTICK_VANILLA] = LAYOUT(
+        KC_1,        XBOX_LS,     XBOX_LB,   KC_4,   KC_5,                 XBOX_RB,     XBOX_RS,   TO(_JOYSTICK_RL),
+        XBOX_LT_TOG, XBOX_X,      XBOX_B,    XBOX_A, XBOX_RB,              XBOX_LB,     XBOX_RB,   XBOX_Y,
+        XBOX_BACK,   XBOX_LEFT,   XBOX_RIGHT, WD,     XBOX_START,          XBOX_UP,     XBOX_DOWN, XBOX_B,
+                     JS_BUTTON24, JS_BUTTON25,                             JS_BUTTON26, RESET
     )
 };
 
@@ -127,33 +145,6 @@ uint8_t scanJoystick(int8_t joystickAddr, uint8_t axis1, uint8_t axis2) {
     return nDevices;
 }
 
-// uint8_t scanTrigger(int8_t joystickAddr, uint8_t axis1, uint8_t axis2) {
-//     uint8_t nDevices = 0;
-//     i2c_status_t error = i2c_start(joystickAddr, TIMEOUT);
-//     if (error == I2C_STATUS_SUCCESS) {
-//         i2c_stop();
-//         // registers 3 and 4 are current horizontal position (MSB first)
-//         // registers 5 and 6 are current vertical position (MSB first)
-//         // registers 7 and 8 are current button state (7 is current position, 8 is if button was pressed since last read of button state)
-//         uint8_t rawData = 0;
-//         i2c_status_t rawAnalog = i2c_readReg(joystickAddr, 3, &rawData, sizeof(rawData), TIMEOUT);
-//         if (rawAnalog == I2C_STATUS_SUCCESS) {
-//             int8_t raw = rawData - 128;
-//             if (joystick_status.axes[axis1] != raw) {
-//                 joystick_status.axes[axis1] = raw;
-//                 joystick_status.status |= JS_UPDATED;
-//             }
-//             dprintf("  Analog: %d\n", joystick_status.axes[axis1]);
-//         } else {
-//             dprintf("  Error: %d\n", rawAnalog);
-//         }
-//         nDevices++;
-//     } else {
-//         dprintf("  Unknown error (%u) at address 0x%02X\n", error, joystickAddr);
-//     }
-//     return nDevices;
-// }
-
 #ifdef USE_SLIDER
 #define QWIIC_SLIDER_ADDR (0x28 << 1)
 void scanSlider(void) {
@@ -194,15 +185,26 @@ void scanJoysticks(void) {
 
 uint16_t scan_timer = 0;
 
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 #define RIGHT_TRIGGER_ZERO 516
 void scanTriggers(void) {
     bool jsUpdated = false;
     int32_t rawVal = analogReadPin(F4);
     if (rawVal > RIGHT_TRIGGER_ZERO + 1) {
-        // map rawVal to rangedVal between 0 and 127
-        double slope = 1.0 * (127 - 0) / (1027 - 528);
-        int16_t rangedVal = slope * (rawVal - 528) + 0;
-        if (!(joystick_status.buttons[(JS_BUTTON0 - JS_BUTTON0) / 8] & (1 << (JS_BUTTON0 % 8)))) {
+        uint16_t minInput = 528;
+        uint16_t maxInput = 1020;
+        uint8_t minOutput = 0;
+        uint8_t maxOutput = 127;
+        if (layer_state == _JOYSTICK_VANILLA) {
+            maxInput = 850;
+            if (rawVal > maxInput) {
+                rawVal = maxInput;
+            }
+        }
+        // map rawVal from input range to output range
+        double slope = 1.0 * (maxOutput - minOutput) / (maxInput - minInput);
+        int16_t rangedVal = MIN(ceil( slope * (rawVal - minInput) + minOutput), maxOutput);
+        if (!(joystick_status.buttons[(XBOX_LT_TOG - JS_BUTTON0) / 8] & (1 << (XBOX_LT_TOG % 8)))) {
             if (joystick_status.axes[5] != 0 || joystick_status.axes[4] != rangedVal) {
                 joystick_status.axes[5] = 0;
                 joystick_status.axes[4] = rangedVal;
@@ -217,19 +219,6 @@ void scanTriggers(void) {
             }
         }
         }
-    else if (rawVal < RIGHT_TRIGGER_ZERO - 1) {
-        // map rawVal to rangedVal from (508, 0) to (0, 127)
-        double slope = 1.0 * (0 - 127) / (508 - 0);
-        int16_t rangedVal = slope * (rawVal - 508) + 0;
-        // if rangedVal is within 4 of 127, set it to 127
-        if (rangedVal > 127 - 4) {
-            rangedVal = 127;
-        }
-        if (rangedVal != joystick_status.axes[5]) {
-            joystick_status.axes[5] = rangedVal;
-            jsUpdated = true;
-        }
-    }
     else {
         // set both axes to 0
         int16_t rangedVal = 0;
