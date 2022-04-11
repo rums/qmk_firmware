@@ -61,4 +61,20 @@
     { ___, ___, R32, R33, ___ }  \
 }
 
-#define LAYOUT LAYOUT_split_3x5_2_rt
+#define LAYOUT_split_3x3_2( \
+    L00, L01, L02,   R00, R01, R02, \
+    L10, L11, L12,   R10, R11, R12, \
+    L20, L21, L22,   R20, R21, R22, \
+         L31, L32,   R30, R31       \
+) { \
+    { L00, L01, L02 }, \
+    { L10, L11, L12 }, \
+    { L20, L21, L22 }, \
+    { ___, L31, L32 }, \
+    { R00, R01, R02 }, \
+    { R10, R11, R12 }, \
+    { R20, R21, R22 }, \
+    { R30, R31, ___ }  \
+}
+
+#define LAYOUT LAYOUT_split_3x3_2

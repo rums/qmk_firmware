@@ -29,10 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* key matrix size */
 #define MATRIX_ROWS 8
 #define MATRIX_ROWS_PER_SIDE (MATRIX_ROWS / 2)
-#define MATRIX_COLS 5
+#define MATRIX_COLS 3
 
 #define USE_I2C
 #define SPLIT_USB_DETECT
+#define SPLIT_USB_TIMEOUT 2000
 #define MASTER_RIGHT
 
 /*
@@ -46,8 +47,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 #define MATRIX_ROW_PINS { B5, B4, E6, F6 }
-#define MATRIX_COL_PINS { B6, B2, B3, B1, F7 }
+#define MATRIX_COL_PINS { B6, B2, B3 }
 #define UNUSED_PINS
+
+#define RIGHT_TRIGGER_PIN F4
+#define LEFT_TRIGGER_PIN F5
 
 /* COL2ROW, ROW2COL */
 #define DIODE_DIRECTION COL2ROW

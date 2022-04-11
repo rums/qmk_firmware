@@ -22,6 +22,5 @@ AUDIO_ENABLE = no           # Audio output
 
 SPLIT_KEYBOARD = yes
 
-
 JOYSTICK_ENABLE = yes        # Enable joystick
 JOYSTICK_DRIVER = analog     # Joystick driver
