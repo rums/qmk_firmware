@@ -201,15 +201,19 @@ uint8_t scanJoystick_controller(int8_t joystickAddr, uint8_t axis1, uint8_t axis
     uint8_t nDevices = 0;
     struct qwiic_joystick_data joystickData = scanJoystick(joystickAddr, horizontalCurve);
     if (joystickData.success) {
+        bool axesChanged = false;
         if (joystick_status.axes[axis1] != joystickData.horizontal) {
             joystick_status.axes[axis1] = joystickData.horizontal;
             joystick_status.status |= JS_UPDATED;
-            uprintf("%d horizontal: %d\n", joystickAddr, joystickData.horizontal);
+            axesChanged = true;
         }
         if (joystick_status.axes[axis2] != joystickData.vertical) {
             joystick_status.axes[axis2] = joystickData.vertical;
             joystick_status.status |= JS_UPDATED;
-            uprintf("%d vertical: %d\n", joystickAddr, joystickData.vertical);
+            axesChanged = true;
+        }
+        if (axesChanged) {
+            uprintf("%d h: %d \t\t %d v: %d\n", joystickAddr, joystickData.horizontal, joystickAddr, joystickData.vertical);
         }
         nDevices++;
     }
