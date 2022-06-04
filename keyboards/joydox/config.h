@@ -54,6 +54,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LEFT_TRIGGER_PIN F5
 #define LEFT_ANALOG_HORIZONTAL F6
 #define LEFT_ANALOG_VERTICAL F7
+#define RIGHT_ANALOG_HORIZONTAL D7
+#define RIGHT_ANALOG_VERTICAL D4
 
 /* COL2ROW, ROW2COL */
 #define DIODE_DIRECTION COL2ROW

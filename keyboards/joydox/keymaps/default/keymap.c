@@ -65,7 +65,15 @@ enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = J
 //     )
 // };
 
-const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {[_JOYSTICK_RL] = LAYOUT(KC_1, KC_2, XBOX_RB, KC_3, KC_4, TO(_JOYSTICK_VANILLA), PS_AIR, XBOX_LS, XBOX_A, XBOX_X, XBOX_RS, XBOX_Y, XBOX_BACK, XBOX_START, WD, WD, XBOX_DOWN, XBOX_B, XBOX_LEFT, XBOX_RIGHT, XBOX_UP, XBOX_DOWN), [_JOYSTICK_VANILLA] = LAYOUT(KC_1, KC_2, XBOX_RB, KC_3, KC_4, TO(_WASD_GAMING), XBOX_LS, XBOX_LB, XBOX_A, XBOX_B, XBOX_RB, XBOX_RS, XBOX_LEFT, XBOX_RIGHT, XBOX_X, XBOX_Y, XBOX_UP, XBOX_DOWN, XBOX_LEFT, XBOX_BACK, XBOX_START, XBOX_DOWN), [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, KC_O, RESET)};
+const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
+    [_JOYSTICK_RL] = LAYOUT(
+        KC_1, KC_2, XBOX_RB,        KC_3, KC_4, TO(_JOYSTICK_VANILLA),
+        PS_AIR, XBOX_LS, XBOX_A,    XBOX_X, XBOX_RS, XBOX_Y,
+        XBOX_LEFT, XBOX_RIGHT, WD,  XBOX_UP, XBOX_B, XBOX_DOWN,
+        XBOX_BACK, XBOX_START,      XBOX_LB, XBOX_RB),
+    [_JOYSTICK_VANILLA] = LAYOUT(KC_1, KC_2, XBOX_RB, KC_3, KC_4, TO(_WASD_GAMING), XBOX_LS, XBOX_LB, XBOX_A, XBOX_B, XBOX_RB, XBOX_RS, XBOX_LEFT, XBOX_RIGHT, XBOX_X, XBOX_Y, XBOX_UP, XBOX_DOWN, XBOX_LEFT, XBOX_BACK, XBOX_START, XBOX_DOWN),
+    [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, KC_O, RESET)
+    };
 
 joystick_config_t joystick_axes[JOYSTICK_AXES_COUNT] = {[0] = JOYSTICK_AXIS_VIRTUAL, [1] = JOYSTICK_AXIS_VIRTUAL, [2] = JOYSTICK_AXIS_VIRTUAL, [3] = JOYSTICK_AXIS_VIRTUAL, [4] = JOYSTICK_AXIS_VIRTUAL, [5] = JOYSTICK_AXIS_VIRTUAL};
 
@@ -79,7 +87,7 @@ int32_t max_y = 0;
 #define QWIIC_JOYSTICK_RIGHT_ADDR (0x24 << 1)
 #define QWIIC_TRIGGER_LEFT_ADDR (0x64 << 1)
 
-struct qwiic_joystick_data {
+struct joystick_data {
     bool    success;
     int8_t  horizontal;
     int8_t  vertical;
@@ -98,12 +106,15 @@ int8_t applyCurve(int8_t value) {
     return value;
 }
 
-int16_t mapToRange(int16_t value, int16_t min, int16_t max, uint8_t min_out, uint8_t max_out) {
+int16_t mapToRange(int16_t value, int16_t min, int16_t max, int8_t min_out, int8_t max_out) {
     double slope = 1.0 * (max_out - min_out) / (max - min);
     return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
 
-struct qwiic_joystick_data scanJoystick(int8_t joystickAddr, bool curveHorizontal) {
+uint16_t scan_timer     = 0;
+bool     trigger_toggle = false;
+
+struct joystick_data scanJoystick(int8_t joystickAddr, bool curveHorizontal) {
     i2c_status_t error = i2c_start(joystickAddr, TIMEOUT);
     if (error == I2C_STATUS_SUCCESS) {
         i2c_stop();
@@ -125,84 +136,86 @@ struct qwiic_joystick_data scanJoystick(int8_t joystickAddr, bool curveHorizonta
         if (horizontalMsb == I2C_STATUS_SUCCESS && horizontalLsb == I2C_STATUS_SUCCESS && verticalMsb == I2C_STATUS_SUCCESS && verticalLsb == I2C_STATUS_SUCCESS && buttonCurrent == I2C_STATUS_SUCCESS && buttonFresh == I2C_STATUS_SUCCESS) {
             int8_t horizontal = horizontalMsbData - 128;
             int8_t vertical   = verticalMsbData - 128;
-            return (struct qwiic_joystick_data){.success = true, .horizontal = curveHorizontal ? applyCurve(horizontal) : horizontal, .vertical = vertical, .buttonCurrent = buttonCurrentData};
+            return (struct joystick_data){.success = true, .horizontal = curveHorizontal ? applyCurve(horizontal) : horizontal, .vertical = vertical, .buttonCurrent = buttonCurrentData};
         } else {
             dprintf("  Error: %d %d %d %d %d %d\n", horizontalMsb, horizontalLsb, verticalMsb, verticalLsb, buttonCurrent, buttonFresh);
         }
     } else {
         dprintf("  Unknown error (%u) at address 0x%02X\n", error, joystickAddr);
     }
-    return (struct qwiic_joystick_data){.success = false, .horizontal = 0, .vertical = 0, .buttonCurrent = 0};
+    return (struct joystick_data){.success = false, .horizontal = 0, .vertical = 0, .buttonCurrent = 0};
 }
 
 uint8_t scanJoystick_controller(int8_t joystickAddr, uint8_t axis1, uint8_t axis2, bool horizontalCurve) {
-    uint8_t                    nDevices     = 0;
-    struct qwiic_joystick_data joystickData = scanJoystick(joystickAddr, horizontalCurve);
+    uint8_t              nDevices     = 0;
+    struct joystick_data joystickData = scanJoystick(joystickAddr, horizontalCurve);
     if (joystickData.success) {
+#ifdef CONSOLE_ENABLE
         bool axesChanged = false;
+#endif
         if (joystick_status.axes[axis1] != joystickData.horizontal) {
             joystick_status.axes[axis1] = joystickData.horizontal;
             joystick_status.status |= JS_UPDATED;
+#ifdef CONSOLE_ENABLE
             axesChanged = true;
+#endif
         }
         if (joystick_status.axes[axis2] != joystickData.vertical) {
             joystick_status.axes[axis2] = joystickData.vertical;
             joystick_status.status |= JS_UPDATED;
+#ifdef CONSOLE_ENABLE
             axesChanged = true;
+#endif
         }
+#ifdef CONSOLE_ENABLE
         if (axesChanged) {
             uprintf("%d h: %d \t\t %d v: %d\n", joystickAddr, joystickData.horizontal, joystickAddr, joystickData.vertical);
         }
+#endif
         nDevices++;
     }
     return nDevices;
 }
 
-uint8_t scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2) {
-    uint8_t nDevices   = 0;
+struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero) {
     int16_t horizontal = analogReadPin(horizontalPin);
     int16_t vertical   = analogReadPin(verticalPin);
 
-    //if(horizontal > max_x) {
-    //    uprintf(" v: %d\t\t", max_x);
-    //    max_x = horizontal;
-    //}
-    //if(vertical > max_y) {
-    //    uprintf(" h: %d\n", max_y);
-    //    max_y = vertical;
-    //}
+    if (horizontal < h_min) horizontal = h_min;
+    if (horizontal > h_max) horizontal = h_max;
+    if (vertical < v_min) vertical = v_min;
+    if (vertical > v_max) vertical = v_max;
+    int8_t horizontal_mapped = 0;
+    int8_t vertical_mapped   = 0;
+    if (horizontal >= h_zero + deadzone) {
+        horizontal_mapped = mapToRange(horizontal, h_zero + deadzone, h_max, 0, 127);
+    } else if (horizontal <= h_zero - deadzone) {
+        horizontal_mapped = mapToRange(horizontal, h_min, h_zero - deadzone, -128, 0);
+    }
+    if (vertical >= v_zero + deadzone) {
+        vertical_mapped = mapToRange(vertical, v_zero + deadzone, v_max, 0, 127);
+    } else if (vertical <= v_zero - deadzone) {
+        vertical_mapped = mapToRange(vertical, v_min, v_zero - deadzone, -128, 0);
+    }
 
-    if (horizontal < 180) horizontal = 182;
-    if (horizontal > 800) horizontal = 800;
-    if (vertical < 182) vertical = 182;
-    if (vertical > 835) vertical = 835;
-    int8_t horizontal_mapped = mapToRange(horizontal, 182, 800, 0, 255) - 128;
-    int8_t vertical_mapped   = mapToRange(vertical, 182, 835, 0, 255) - 128;
-
-    bool axesChanged = false;
     if (joystick_status.axes[axis1] != horizontal_mapped) {
         joystick_status.axes[axis1] = horizontal_mapped;
         joystick_status.status |= JS_UPDATED;
-        axesChanged = true;
     }
     if (joystick_status.axes[axis2] != vertical_mapped) {
         joystick_status.axes[axis2] = vertical_mapped;
         joystick_status.status |= JS_UPDATED;
-        axesChanged = true;
     }
-    if (axesChanged) {
-        // uprintf(" left h: %d\t\t", horizontal);
-        // uprintf(" right v: %d\n", vertical);
-        uprintf(" left h_mapped: %d\t\t", horizontal_mapped);
-        uprintf(" right v_mapped: %d\n", vertical_mapped);
-    }
-    nDevices++;
-    return nDevices;
+#ifdef CONSOLE_ENABLE
+    // uprintf("h: %d\t\t", horizontal);
+    // uprintf("v: %d\n", vertical);
+#endif
+    return (struct joystick_data){.success = true, .horizontal = horizontal_mapped, .vertical = vertical_mapped, .buttonCurrent = 0};
 }
 
 uint8_t scanJoystick_wasd(int8_t joystickAddr, bool isLeft) {
     uint8_t nDevices = 0;
-    // qwiic_joystick_data joystickData = scanJoystick(joystickAddr);
+    // joystick_data joystickData = scanJoystick(joystickAddr);
     // implement layer changes based on joystick position
     return nDevices;
 }
@@ -235,18 +248,49 @@ void scanSlider(void) {
 void scanJoysticks(void) {
     uint8_t nDevices = 0;
 
-    // nDevices += scanJoystick_controller(QWIIC_JOYSTICK_LEFT_ADDR, 0, 1, false);
-    nDevices += scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1);
-    nDevices += scanJoystick_controller(QWIIC_JOYSTICK_RIGHT_ADDR, 2, 3, true);
+    uint16_t l_h_min    = 165;
+    uint16_t l_h_max    = 882;
+    uint16_t l_v_min    = 214;
+    uint16_t l_v_max    = 906;
+    uint16_t l_deadzone = 10;
+    uint16_t l_h_zero   = 505;
+    uint16_t l_v_zero   = 515;
+
+    uint16_t r_h_min    = 130;
+    uint16_t r_h_max    = 750;
+    uint16_t r_v_min    = 207;
+    uint16_t r_v_max    = 845;
+    uint16_t r_deadzone = 20;
+    uint16_t r_h_zero   = 484;
+    uint16_t r_v_zero   = 500;
+
+// nDevices += scanJoystick_controller(QWIIC_JOYSTICK_LEFT_ADDR, 0, 1, false);
+// nDevices += scanJoystick_controller(QWIIC_JOYSTICK_RIGHT_ADDR, 2, 3, true);
+#ifdef CONSOLE_ENABLE
+    struct joystick_data left  = scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, l_h_min, l_h_max, l_v_min, l_v_max, l_deadzone, l_h_zero, l_v_zero);
+    struct joystick_data right = scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, r_h_min, r_h_max, r_v_min, r_v_max, r_deadzone, r_h_zero, r_v_zero);
+#else
+    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, l_h_min, l_h_max, l_v_min, l_v_max, l_deadzone, l_h_zero, l_v_zero);
+    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, r_h_min, r_h_max, r_v_min, r_v_max, r_deadzone, r_h_zero, r_v_zero);
+#endif
+#ifdef CONSOLE_ENABLE
+    // if 100ms have passed
+    if (timer_elapsed(scan_timer) > 200) {
+        uprintf(" left h: %d\t\t", left.horizontal);
+        uprintf(" left v: %d\t\t\t\t", left.vertical);
+        uprintf(" right h: %d\t\t", right.horizontal);
+        uprintf(" right v: %d\n", right.vertical);
+        // uprintf(" left h_mapped: %d\t\t", horizontal_mapped);
+        // uprintf(" right v_mapped: %d\n", vertical_mapped);
+        scan_timer = timer_read();
+    }
+#endif
 #ifdef USE_SLIDER
     nDevices += scanSlider();
 #endif
 
     if (nDevices == 0) dprintf("No I2C devices found\n");
 }
-
-uint16_t scan_timer     = 0;
-bool     trigger_toggle = false;
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
@@ -303,8 +347,8 @@ void scanTriggers(void) {
     int32_t rightRawVal = analogReadPin(RIGHT_TRIGGER_PIN);
     int32_t leftRawVal  = analogReadPin(LEFT_TRIGGER_PIN);
     if (IS_LAYER_ON(_WASD_GAMING)) {
-        wasdTriggers(leftRawVal, 510, 288, 510);
-        wasdTriggers(rightRawVal, 516, 528, 750);
+        //wasdTriggers(leftRawVal, 510, 288, 510);
+        //wasdTriggers(rightRawVal, 516, 528, 750);
     } else {
         leftRawVal = 1023 - leftRawVal;
         controllerTriggers(4, leftRawVal, 513, 528, 980);
@@ -352,7 +396,7 @@ void handle_wd(void) {
         wd_second = true;
         wd_stop   = true;
         wd_timer  = timer_read();
-    } else if (wd_second && (timer_elapsed(wd_timer) > 70)) {
+    } else if (wd_second && (timer_elapsed(wd_timer) > 65)) {
         joystick_status.buttons[(XBOX_A - JS_BUTTON0) / 8] |= 1 << (XBOX_A % 8);
         joystick_status.status |= JS_UPDATED;
         wd_second = false;
@@ -365,23 +409,25 @@ void handle_wd(void) {
 }
 
 bool special_powerslide_pressed = false;
+bool special_powerslide_released = false;
 
 void handle_special_powerslide(void) {
     if (special_powerslide_pressed) {
         // if air roll left or right are pressed, don't air roll
         if (joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] & (1 << (XBOX_RS % 8)) || joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] & (1 << (XBOX_LS % 8))) {
             joystick_status.buttons[(XBOX_LB - JS_BUTTON0) / 8] |= 1 << (XBOX_LB % 8);
-            joystick_status.buttons[(XBOX_DOWN - JS_BUTTON0) / 8] &= ~(1 << (XBOX_DOWN % 8));
+            joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
             joystick_status.status |= JS_UPDATED;
         } else {
             joystick_status.buttons[(XBOX_LB - JS_BUTTON0) / 8] |= 1 << (XBOX_LB % 8);
-            joystick_status.buttons[(XBOX_DOWN - JS_BUTTON0) / 8] |= 1 << (XBOX_DOWN % 8);
+            joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] |= 1 << (XBOX_B % 8);
             joystick_status.status |= JS_UPDATED;
         }
-    } else {
+    } else if (special_powerslide_released) {
         joystick_status.buttons[(XBOX_LB - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LB % 8));
-        joystick_status.buttons[(XBOX_DOWN - JS_BUTTON0) / 8] &= ~(1 << (XBOX_DOWN % 8));
+        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
         joystick_status.status |= JS_UPDATED;
+        special_powerslide_released = false;
     }
 }
 
@@ -410,6 +456,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 special_powerslide_pressed = true;
             } else {
                 special_powerslide_pressed = false;
+                special_powerslide_released = true;
             }
         case JOYSTICK_LT_TOGGLE:
             if (record->event.pressed) {
