@@ -40,7 +40,7 @@ enum layer_names { _JOYSTICK_RL, _JOYSTICK_VANILLA, _WASD_GAMING };
 
 // Defines the ke
 // ycodes used by our macros in process_record_user
-enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, WD, PS_AIR, JOYSTICK_LT_TOGGLE };
+enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, WD, PS_AIR, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE };
 
 enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = JS_BUTTON7, XBOX_Y = JS_BUTTON9, XBOX_LB = JS_BUTTON2, XBOX_RB = JS_BUTTON4, XBOX_BACK = JS_BUTTON10, XBOX_START = JS_BUTTON14, XBOX_LS = JS_BUTTON1, XBOX_RS = JS_BUTTON8, XBOX_UP = JS_BUTTON17, XBOX_DOWN = JS_BUTTON18, XBOX_LEFT = JS_BUTTON11, XBOX_RIGHT = JS_BUTTON12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
 
@@ -68,8 +68,8 @@ enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = J
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
         KC_1, KC_2, XBOX_RB,        KC_3, KC_4, TO(_JOYSTICK_VANILLA),
-        PS_AIR, XBOX_LS, XBOX_A,    XBOX_X, XBOX_RS, XBOX_Y,
-        XBOX_LEFT, XBOX_RIGHT, WD,  XBOX_UP, XBOX_B, XBOX_DOWN,
+        XBOX_LB, AIR_LEFT, XBOX_A,    XBOX_X, AIR_RIGHT, XBOX_Y,
+        XBOX_LEFT, XBOX_RIGHT, WD,  XBOX_UP, AIR_ROLL, XBOX_DOWN,
         XBOX_BACK, XBOX_START,      XBOX_LB, XBOX_RB),
     [_JOYSTICK_VANILLA] = LAYOUT(KC_1, KC_2, XBOX_RB, KC_3, KC_4, TO(_WASD_GAMING), XBOX_LS, XBOX_LB, XBOX_A, XBOX_B, XBOX_RB, XBOX_RS, XBOX_LEFT, XBOX_RIGHT, XBOX_X, XBOX_Y, XBOX_UP, XBOX_DOWN, XBOX_LEFT, XBOX_BACK, XBOX_START, XBOX_DOWN),
     [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, KC_O, RESET)
@@ -294,6 +294,7 @@ void scanJoysticks(void) {
 
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+uint8_t ignoreFrames = 0;
 void controllerTriggers(uint8_t axis, int32_t rawVal, uint16_t axisZero, uint16_t minInput, uint16_t maxInput) {
     bool jsUpdated = false;
     if (rawVal > axisZero + 1) {
@@ -311,8 +312,13 @@ void controllerTriggers(uint8_t axis, int32_t rawVal, uint16_t axisZero, uint16_
     } else {
         int16_t rangedVal = 0;
         if (rangedVal != joystick_status.axes[axis]) {
-            joystick_status.axes[axis] = rangedVal;
-            jsUpdated                  = true;
+            if (abs(rangedVal - joystick_status.axes[axis]) < 20 || ignoreFrames == 10) {
+                joystick_status.axes[axis] = rangedVal;
+                jsUpdated                  = true;
+                ignoreFrames = 0;
+            } else {
+                ignoreFrames += 1;
+            }
         }
     }
     if (jsUpdated) {
@@ -343,9 +349,38 @@ void wasdTriggers(int32_t rawVal, uint16_t axisZero, uint16_t minInput, uint16_t
     }
 }
 
+int16_t prev_right_trigger = 0;
+int16_t smoothAnalog(int32_t readPin) {
+    if (abs(analogReadPin(readPin) - prev_right_trigger) > 30) {
+        return prev_right_trigger;
+    }
+    const uint8_t sampleCount = 20;
+    int16_t rawVals[20] = {0};
+    int16_t avgVal    = 0;
+    for (uint8_t i = 0; i < sampleCount; i++) {
+        rawVals[i] = analogReadPin(readPin);
+        avgVal += rawVals[i];
+    }
+    avgVal /= sampleCount;
+    if (avgVal > 0) {
+        // recalculate mean, excluding values that are too far away from the mean
+        int16_t newAvgVal = 0;
+        for (uint8_t i = 0; i < sampleCount; i++) {
+            if (abs(rawVals[i] - avgVal) < 10) {
+                newAvgVal += rawVals[i];
+            }
+        }
+        newAvgVal /= sampleCount;
+        prev_right_trigger = newAvgVal;
+        return newAvgVal;
+    }
+    prev_right_trigger = avgVal;
+    return avgVal;
+}
+
 void scanTriggers(void) {
-    int32_t rightRawVal = analogReadPin(RIGHT_TRIGGER_PIN);
-    int32_t leftRawVal  = analogReadPin(LEFT_TRIGGER_PIN);
+    int16_t rightRawVal = analogReadPin(RIGHT_TRIGGER_PIN);
+    int16_t leftRawVal = analogReadPin(LEFT_TRIGGER_PIN);
     if (IS_LAYER_ON(_WASD_GAMING)) {
         //wasdTriggers(leftRawVal, 510, 288, 510);
         //wasdTriggers(rightRawVal, 516, 528, 750);
@@ -410,6 +445,42 @@ void handle_wd(void) {
 
 bool special_powerslide_pressed = false;
 bool special_powerslide_released = false;
+bool air_left_pressed = false;
+bool air_right_pressed = false;
+bool air_roll_pressed = false;
+
+void handle_air_roll_state(void) {
+    if (air_roll_pressed) {
+        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
+        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
+        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] |= 1 << (XBOX_B % 8);
+        joystick_status.status |= JS_UPDATED;
+    }
+    else if (air_left_pressed && air_right_pressed) {
+        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
+        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
+        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] |= 1 << (XBOX_B % 8);
+        joystick_status.status |= JS_UPDATED;
+    }
+    else if (air_left_pressed) {
+        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] |= 1 << (XBOX_LS % 8);
+        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= 1 << (XBOX_RS % 8);
+        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
+        joystick_status.status |= JS_UPDATED;
+    }
+    else if (air_right_pressed) {
+        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] |= 1 << (XBOX_RS % 8);
+        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= 1 << (XBOX_LS % 8);
+        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
+        joystick_status.status |= JS_UPDATED;
+    }
+    else {
+        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
+        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
+        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
+        joystick_status.status |= JS_UPDATED;
+    }
+}
 
 void handle_special_powerslide(void) {
     if (special_powerslide_pressed) {
@@ -433,7 +504,7 @@ void handle_special_powerslide(void) {
 
 void joystick_task(void) {
     handle_wd();
-    handle_special_powerslide();
+    //handle_special_powerslide();
 
     if (process_joystick_analogread() && (joystick_status.status & JS_UPDATED)) {
         send_joystick_packet(&joystick_status);
@@ -451,6 +522,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 wd_first = true;
                 // SEND_STRING(SS_TAP(X_V) SS_DELAY(70) SS_TAP(X_V));
             }
+            break;
         case PS_AIR:
             if (record->event.pressed) {
                 special_powerslide_pressed = true;
@@ -458,6 +530,31 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 special_powerslide_pressed = false;
                 special_powerslide_released = true;
             }
+            break;
+        case AIR_LEFT:
+            if (record->event.pressed) {
+                air_left_pressed = true;
+            } else {
+                air_left_pressed = false;
+            }
+            handle_air_roll_state();
+            break;
+        case AIR_RIGHT:
+            if (record->event.pressed) {
+                air_right_pressed = true;
+            } else {
+                air_right_pressed = false;
+            }
+            handle_air_roll_state();
+            break;
+        case AIR_ROLL:
+            if (record->event.pressed) {
+                air_roll_pressed = true;
+            } else {
+                air_roll_pressed = false;
+            }
+            handle_air_roll_state();
+            break;
         case JOYSTICK_LT_TOGGLE:
             if (record->event.pressed) {
                 trigger_toggle = true;
