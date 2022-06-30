@@ -464,13 +464,13 @@ void handle_air_roll_state(void) {
     }
     else if (air_left_pressed) {
         joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] |= 1 << (XBOX_LS % 8);
-        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= 1 << (XBOX_RS % 8);
+        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
         joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
         joystick_status.status |= JS_UPDATED;
     }
     else if (air_right_pressed) {
         joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] |= 1 << (XBOX_RS % 8);
-        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= 1 << (XBOX_LS % 8);
+        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
         joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
         joystick_status.status |= JS_UPDATED;
     }
