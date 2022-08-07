@@ -27,14 +27,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PRODUCT      joydox
 
 /* key matrix size */
-#define MATRIX_ROWS 8
-#define MATRIX_ROWS_PER_SIDE (MATRIX_ROWS / 2)
-#define MATRIX_COLS 3
+#define MATRIX_ROWS 4
+// #define MATRIX_ROWS_PER_SIDE (MATRIX_ROWS / 2)
+#define MATRIX_COLS 6
 
-#define USE_I2C
+/*
+ #define USE_I2C
 #define SPLIT_USB_DETECT
 #define SPLIT_USB_TIMEOUT 2000
 #define MASTER_RIGHT
+*/
 
 /*
  * Keyboard Matrix Assignments
@@ -47,7 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
 #define MATRIX_ROW_PINS { B5, B4, E6, B1 }
-#define MATRIX_COL_PINS { B6, B2, B3 }
+#define MATRIX_COL_PINS { B6, B2, B3, D1, D0, C6 }
 #define UNUSED_PINS
 
 #define RIGHT_TRIGGER_PIN F4
@@ -63,7 +65,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /*
  * Split Keyboard specific options, make sure you have 'SPLIT_KEYBOARD = yes' in your rules.mk, and define SOFT_SERIAL_PIN.
  */
-#define SOFT_SERIAL_PIN D0  // or D1, D2, D3, E6
+//#define SOFT_SERIAL_PIN D0  // or D1, D2, D3, E6
 
 //#define LED_NUM_LOCK_PIN B0
 //#define LED_CAPS_LOCK_PIN B1

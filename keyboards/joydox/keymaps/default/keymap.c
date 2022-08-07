@@ -15,7 +15,7 @@
  */
 #include QMK_KEYBOARD_H
 #include "joystick.h"
-#include "i2c_master.h"
+//#include "i2c_master.h"
 #include "analog.h"
 
 #define TIMEOUT 50
@@ -71,7 +71,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         XBOX_LB, AIR_LEFT, XBOX_A,    XBOX_X, AIR_RIGHT, XBOX_Y,
         XBOX_LEFT, XBOX_RIGHT, WD,  XBOX_UP, AIR_ROLL, XBOX_DOWN,
         XBOX_BACK, XBOX_START,      XBOX_LB, XBOX_RB),
-    [_JOYSTICK_VANILLA] = LAYOUT(KC_1, KC_2, XBOX_RB, KC_3, KC_4, TO(_WASD_GAMING), XBOX_LS, XBOX_LB, XBOX_A, XBOX_B, XBOX_RB, XBOX_RS, XBOX_LEFT, XBOX_RIGHT, XBOX_X, XBOX_Y, XBOX_UP, XBOX_DOWN, XBOX_LEFT, XBOX_BACK, XBOX_START, XBOX_DOWN),
+    [_JOYSTICK_VANILLA] = LAYOUT(
+        KC_1, KC_2, XBOX_RB,            KC_3, KC_4, TO(_WASD_GAMING),
+        XBOX_LB, XBOX_X, XBOX_A,       XBOX_B, XBOX_Y, XBOX_RB,
+        XBOX_LEFT, XBOX_RIGHT, XBOX_LS,  XBOX_RS, XBOX_UP, XBOX_DOWN,
+        XBOX_LEFT, XBOX_BACK,           XBOX_START, XBOX_DOWN),
     [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, KC_O, RESET)
     };
 
@@ -86,6 +90,8 @@ int32_t max_y = 0;
 #define QWIIC_JOYSTICK_LEFT_ADDR (0x20 << 1)
 #define QWIIC_JOYSTICK_RIGHT_ADDR (0x24 << 1)
 #define QWIIC_TRIGGER_LEFT_ADDR (0x64 << 1)
+
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 struct joystick_data {
     bool    success;
@@ -114,6 +120,7 @@ int16_t mapToRange(int16_t value, int16_t min, int16_t max, int8_t min_out, int8
 uint16_t scan_timer     = 0;
 bool     trigger_toggle = false;
 
+#ifdef I2C_ENABLE
 struct joystick_data scanJoystick(int8_t joystickAddr, bool curveHorizontal) {
     i2c_status_t error = i2c_start(joystickAddr, TIMEOUT);
     if (error == I2C_STATUS_SUCCESS) {
@@ -169,13 +176,14 @@ uint8_t scanJoystick_controller(int8_t joystickAddr, uint8_t axis1, uint8_t axis
         }
 #ifdef CONSOLE_ENABLE
         if (axesChanged) {
-            uprintf("%d h: %d \t\t %d v: %d\n", joystickAddr, joystickData.horizontal, joystickAddr, joystickData.vertical);
+            // uprintf("%d h: %d \t\t %d v: %d\n", joystickAddr, joystickData.horizontal, joystickAddr, joystickData.vertical);
         }
 #endif
         nDevices++;
     }
     return nDevices;
 }
+#endif
 
 struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero) {
     int16_t horizontal = analogReadPin(horizontalPin);
@@ -207,8 +215,10 @@ struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8
         joystick_status.status |= JS_UPDATED;
     }
 #ifdef CONSOLE_ENABLE
-    // uprintf("h: %d\t\t", horizontal);
-    // uprintf("v: %d\n", vertical);
+    if (timer_elapsed(scan_timer) > 200 && axis1 == 2) {
+        uprintf("h: %d\t\t", horizontal);
+        uprintf("v: %d\n", vertical);
+    }
 #endif
     return (struct joystick_data){.success = true, .horizontal = horizontal_mapped, .vertical = vertical_mapped, .buttonCurrent = 0};
 }
@@ -246,20 +256,20 @@ void scanSlider(void) {
 #endif  // USE_SLIDER
 
 void scanJoysticks(void) {
-    uint8_t nDevices = 0;
+    //uint8_t nDevices = 0;
 
-    uint16_t l_h_min    = 165;
-    uint16_t l_h_max    = 882;
-    uint16_t l_v_min    = 214;
-    uint16_t l_v_max    = 906;
+    uint16_t l_h_min    = 180;
+    uint16_t l_h_max    = 840;
+    uint16_t l_v_min    = 235;
+    uint16_t l_v_max    = 900;
     uint16_t l_deadzone = 10;
     uint16_t l_h_zero   = 505;
     uint16_t l_v_zero   = 515;
 
-    uint16_t r_h_min    = 130;
-    uint16_t r_h_max    = 750;
-    uint16_t r_v_min    = 207;
-    uint16_t r_v_max    = 845;
+    uint16_t r_h_min    = 210;
+    uint16_t r_h_max    = 690;
+    uint16_t r_v_min    = 300;
+    uint16_t r_v_max    = 820;
     uint16_t r_deadzone = 20;
     uint16_t r_h_zero   = 484;
     uint16_t r_v_zero   = 500;
@@ -267,8 +277,8 @@ void scanJoysticks(void) {
 // nDevices += scanJoystick_controller(QWIIC_JOYSTICK_LEFT_ADDR, 0, 1, false);
 // nDevices += scanJoystick_controller(QWIIC_JOYSTICK_RIGHT_ADDR, 2, 3, true);
 #ifdef CONSOLE_ENABLE
-    struct joystick_data left  = scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, l_h_min, l_h_max, l_v_min, l_v_max, l_deadzone, l_h_zero, l_v_zero);
-    struct joystick_data right = scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, r_h_min, r_h_max, r_v_min, r_v_max, r_deadzone, r_h_zero, r_v_zero);
+    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, l_h_min, l_h_max, l_v_min, l_v_max, l_deadzone, l_h_zero, l_v_zero);
+    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, r_h_min, r_h_max, r_v_min, r_v_max, r_deadzone, r_h_zero, r_v_zero);
 #else
     scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, l_h_min, l_h_max, l_v_min, l_v_max, l_deadzone, l_h_zero, l_v_zero);
     scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, r_h_min, r_h_max, r_v_min, r_v_max, r_deadzone, r_h_zero, r_v_zero);
@@ -276,23 +286,21 @@ void scanJoysticks(void) {
 #ifdef CONSOLE_ENABLE
     // if 100ms have passed
     if (timer_elapsed(scan_timer) > 200) {
-        uprintf(" left h: %d\t\t", left.horizontal);
-        uprintf(" left v: %d\t\t\t\t", left.vertical);
-        uprintf(" right h: %d\t\t", right.horizontal);
-        uprintf(" right v: %d\n", right.vertical);
+        // uprintf(" left h: %d\t\t", left.horizontal);
+        // uprintf(" left v: %d\t\t\t\t", left.vertical);
+        // uprintf(" right h: %d\t\t", right.horizontal);
+        // uprintf(" right v: %d\n", right.vertical);
         // uprintf(" left h_mapped: %d\t\t", horizontal_mapped);
         // uprintf(" right v_mapped: %d\n", vertical_mapped);
         scan_timer = timer_read();
     }
 #endif
-#ifdef USE_SLIDER
-    nDevices += scanSlider();
-#endif
+// #ifdef USE_SLIDER
+//     nDevices += scanSlider();
+// #endif
 
-    if (nDevices == 0) dprintf("No I2C devices found\n");
+    // if (nDevices == 0) dprintf("No I2C devices found\n");
 }
-
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 uint8_t ignoreFrames = 0;
 void controllerTriggers(uint8_t axis, int32_t rawVal, uint16_t axisZero, uint16_t minInput, uint16_t maxInput) {
@@ -410,12 +418,17 @@ bool process_joystick_analogread() {
 }
 
 void keyboard_post_init_user(void) {
-    // debug_enable = true;
-    // debug_matrix = true;
+    #ifdef CONSOLE_ENABLE
+      debug_enable=true;
+      debug_matrix=true;
+      debug_keyboard=true;
+    #endif
+    #ifdef USE_I2C
     if (is_keyboard_master()) {
         i2c_init();
         scan_timer = timer_read();
     }
+    #endif
 }
 
 uint16_t wd_timer;
