@@ -191,6 +191,8 @@ struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8
     if (mirror) {
         horizontal = 1023 - horizontal;
         vertical   = 1023 - vertical;
+        h_zero    = 1023 - h_zero;
+        v_zero    = 1023 - v_zero;
     }
 
 
