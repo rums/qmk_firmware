@@ -1,2 +1,3 @@
 QUANTUM_LIB_SRC += analog.c
 TRIGGER_ENABLE = yes
+CONSOLE_ENABLE = yes
