@@ -620,30 +620,30 @@ void joystick_task(void) {
 
 #ifdef OLED_ENABLE
 bool oled_task_user(void) {
-    uprintf("from oled_task_user\n");
-    // Host Keyboard Layer Status
-    oled_write_P(PSTR("Layer: "), false);
-
-    switch (get_highest_layer(layer_state)) {
-        case _QWERTY:
-            oled_write_P(PSTR("Default\n"), false);
-            break;
-        case _FN:
-            oled_write_P(PSTR("FN\n"), false);
-            break;
-        case _ADJ:
-            oled_write_P(PSTR("ADJ\n"), false);
-            break;
-        default:
-            // Or use the write_ln shortcut over adding '\n' to the end of your string
-            oled_write_ln_P(PSTR("Undefined"), false);
+    // check if we're calibrating analog sticks
+    if (DO_CALIBRATE_JOYSTICKS) {
+        // if we are, show the calibration screen
+        oled_write_P(PSTR("Calibrating Joysticks"), false);
     }
+    else {
+        // Host Keyboard Layer Status
+        oled_write_P(PSTR("Layer: "), false);
 
-    // Host Keyboard LED Status
-    led_t led_state = host_keyboard_led_state();
-    oled_write_P(led_state.num_lock ? PSTR("NUM ") : PSTR("    "), false);
-    oled_write_P(led_state.caps_lock ? PSTR("CAP ") : PSTR("    "), false);
-    oled_write_P(led_state.scroll_lock ? PSTR("SCR ") : PSTR("    "), false);
+        switch (get_highest_layer(layer_state)) {
+            case _JOYSTICK_RL:
+                oled_write_P(PSTR("RL\n"), false);
+                break;
+            case _JOYSTICK_VANILLA:
+                oled_write_P(PSTR("VAN\n"), false);
+                break;
+            case _WASD_GAMING:
+                oled_write_P(PSTR("WASD\n"), false);
+                break;
+            default:
+                // Or use the write_ln shortcut over adding '\n' to the end of your string
+                oled_write_ln_P(PSTR("Undefined"), false);
+        }
+    }
 
     return false;
 }
