@@ -145,27 +145,6 @@ layer_state_t layer_state_set_user(layer_state_t state) {
   return update_tri_layer_state(state, _LOWER, _RAISE, _ADJUST);
 }
 
-// #define QWIIC_JOYSTICK_ADDR (0x20 << 1)
-int16_t analogReadPin(pin_t inputPin) {
-    return 50;
-    // uint8_t *data = (uint8_t *)malloc(2);
-    // uint16_t length = 2;
-    // uint16_t timeout = 1000;
-    // i2c_start(QWIIC_JOYSTICK_ADDR, timeout);
-    // char *charData = (char *)malloc(length);
-    // i2c_receive(QWIIC_JOYSTICK_ADDR, data, length, timeout);
-    // for (int i = 0; i < length; i++) {
-    //     charData[i] = data[i];
-    // }
-    // i2c_stop();
-    // print("data: ");
-    // print(charData);
-    // print("\n");
-    // int16_t result = (data[0] << 8) | data[1];
-    // free(data);
-    // return result;
-}
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   switch (keycode) {
     case QWERTY:
