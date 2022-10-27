@@ -42,7 +42,10 @@ enum layer_names { _JOYSTICK_RL, _JOYSTICK_VANILLA, _WASD_GAMING };
 // ycodes used by our macros in process_record_user
 enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, WD, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS };
 
+// enum controller_mappings { XBOX_A = 3, XBOX_B = 19, XBOX_X = 7, XBOX_Y = 9, XBOX_LB = 2, XBOX_RB = 4, XBOX_BACK = 10, XBOX_START = 14, XBOX_LS = 1, XBOX_RS = 8, XBOX_UP = 17, XBOX_DOWN = 18, XBOX_LEFT = 11, XBOX_RIGHT = 12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
 enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = JS_BUTTON7, XBOX_Y = JS_BUTTON9, XBOX_LB = JS_BUTTON2, XBOX_RB = JS_BUTTON4, XBOX_BACK = JS_BUTTON10, XBOX_START = JS_BUTTON14, XBOX_LS = JS_BUTTON1, XBOX_RS = JS_BUTTON8, XBOX_UP = JS_BUTTON17, XBOX_DOWN = JS_BUTTON18, XBOX_LEFT = JS_BUTTON11, XBOX_RIGHT = JS_BUTTON12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
+// macro to put button in range 0-31 -- done by subtracting JS_BUTTON0
+#define BUTTON(x) (x - JS_BUTTON0)
 
 // const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 //     [_JOYSTICK_RL] = LAYOUT(
@@ -516,20 +519,17 @@ bool     wd_stop   = false;
 
 void handle_wd(void) {
     if (wd_first) {
-        joystick_status.buttons[(XBOX_A - JS_BUTTON0) / 8] |= 1 << (XBOX_A % 8);
-        joystick_status.status |= JS_UPDATED;
+        register_joystick_button(BUTTON(XBOX_A));
         wd_first  = false;
         wd_second = true;
         wd_stop   = true;
         wd_timer  = timer_read();
     } else if (wd_second && (timer_elapsed(wd_timer) > 65)) {
-        joystick_status.buttons[(XBOX_A - JS_BUTTON0) / 8] |= 1 << (XBOX_A % 8);
-        joystick_status.status |= JS_UPDATED;
+        register_joystick_button(BUTTON(XBOX_A));
         wd_second = false;
         wd_stop   = true;
     } else if (wd_stop) {
-        joystick_status.buttons[(XBOX_A - JS_BUTTON0) / 8] &= ~(1 << (XBOX_A % 8));
-        joystick_status.status |= JS_UPDATED;
+        unregister_joystick_button(BUTTON(XBOX_A));
         wd_stop = false;
     }
 }
@@ -538,12 +538,10 @@ bool    wd_manual = false;
 void handle_wd_manual(void) {
     if (wd_manual) {
         if (timer_elapsed(wd_timer) > 1) {
-            joystick_status.buttons[(XBOX_A - JS_BUTTON0) / 8] &= ~(1 << (XBOX_A % 8));
-            joystick_status.status |= JS_UPDATED;
+            unregister_joystick_button(BUTTON(XBOX_A));
             wd_manual = false;
         } else {
-            joystick_status.buttons[(XBOX_A - JS_BUTTON0) / 8] |= 1 << (XBOX_A % 8);
-            joystick_status.status |= JS_UPDATED;
+            register_joystick_button(BUTTON(XBOX_A));
         }
     }
 }
@@ -556,53 +554,45 @@ bool air_roll_pressed = false;
 
 void handle_air_roll_state(void) {
     if (air_roll_pressed) {
-        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
-        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
-        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] |= 1 << (XBOX_B % 8);
-        joystick_status.status |= JS_UPDATED;
+        register_joystick_button(BUTTON(XBOX_B));
+        unregister_joystick_button(BUTTON(XBOX_LS));
+        unregister_joystick_button(BUTTON(XBOX_RS));
     }
     else if (air_left_pressed && air_right_pressed) {
-        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
-        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
-        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] |= 1 << (XBOX_B % 8);
-        joystick_status.status |= JS_UPDATED;
+        register_joystick_button(BUTTON(XBOX_B));
+        unregister_joystick_button(BUTTON(XBOX_LS));
+        unregister_joystick_button(BUTTON(XBOX_RS));
     }
     else if (air_left_pressed) {
-        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] |= 1 << (XBOX_LS % 8);
-        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
-        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
-        joystick_status.status |= JS_UPDATED;
+        register_joystick_button(BUTTON(XBOX_LS));
+        unregister_joystick_button(BUTTON(XBOX_RS));
+        unregister_joystick_button(BUTTON(XBOX_B));
     }
     else if (air_right_pressed) {
-        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] |= 1 << (XBOX_RS % 8);
-        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
-        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
-        joystick_status.status |= JS_UPDATED;
+        register_joystick_button(BUTTON(XBOX_RS));
+        unregister_joystick_button(BUTTON(XBOX_LS));
+        unregister_joystick_button(BUTTON(XBOX_B));
     }
     else {
-        joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LS % 8));
-        joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] &= ~(1 << (XBOX_RS % 8));
-        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
-        joystick_status.status |= JS_UPDATED;
+        unregister_joystick_button(BUTTON(XBOX_LS));
+        unregister_joystick_button(BUTTON(XBOX_RS));
+        unregister_joystick_button(BUTTON(XBOX_B));
     }
 }
 
 void handle_special_powerslide(void) {
     if (special_powerslide_pressed) {
         // if air roll left or right are pressed, don't air roll
-        if (joystick_status.buttons[(XBOX_RS - JS_BUTTON0) / 8] & (1 << (XBOX_RS % 8)) || joystick_status.buttons[(XBOX_LS - JS_BUTTON0) / 8] & (1 << (XBOX_LS % 8))) {
-            joystick_status.buttons[(XBOX_LB - JS_BUTTON0) / 8] |= 1 << (XBOX_LB % 8);
-            joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
-            joystick_status.status |= JS_UPDATED;
+        if (joystick_status.buttons[BUTTON(XBOX_RS) / 8] & (1 << (BUTTON(XBOX_RS) % 8)) || joystick_status.buttons[BUTTON(XBOX_LS) / 8] & (1 << (BUTTON(XBOX_LS) % 8))) {
+            register_joystick_button(BUTTON(XBOX_LB));
+            unregister_joystick_button(BUTTON(XBOX_B));
         } else {
-            joystick_status.buttons[(XBOX_LB - JS_BUTTON0) / 8] |= 1 << (XBOX_LB % 8);
-            joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] |= 1 << (XBOX_B % 8);
-            joystick_status.status |= JS_UPDATED;
+            register_joystick_button(BUTTON(XBOX_LB));
+            register_joystick_button(BUTTON(XBOX_B));
         }
     } else if (special_powerslide_released) {
-        joystick_status.buttons[(XBOX_LB - JS_BUTTON0) / 8] &= ~(1 << (XBOX_LB % 8));
-        joystick_status.buttons[(XBOX_B - JS_BUTTON0) / 8] &= ~(1 << (XBOX_B % 8));
-        joystick_status.status |= JS_UPDATED;
+        unregister_joystick_button(BUTTON(XBOX_LB));
+        unregister_joystick_button(BUTTON(XBOX_B));
         special_powerslide_released = false;
     }
 }
@@ -613,8 +603,9 @@ void joystick_task(void) {
     handle_special_powerslide();
 
     if (process_joystick_analogread() && (joystick_status.status & JS_UPDATED)) {
-        send_joystick_packet(&joystick_status);
-        joystick_status.status &= ~JS_UPDATED;
+        joystick_flush();
+        // send_joystick_packet(&joystick_status);
+        // joystick_status.status &= ~JS_UPDATED;
     }
 }
 
