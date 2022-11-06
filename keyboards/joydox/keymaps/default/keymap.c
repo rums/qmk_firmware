@@ -167,7 +167,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case WD:
             if (record->event.pressed) {
                 wd_first = true;
-                uprintf("wd_first: %u)\n", wd_first);
                 // SEND_STRING(SS_TAP(X_V) SS_DELAY(70) SS_TAP(X_V));
             }
             break;
