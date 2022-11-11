@@ -5,7 +5,7 @@ struct joystick_data {
     uint8_t buttonCurrent;
 };
 
-extern bool DO_CALIBRATE_JOYSTICKS;
+extern bool DO_CALIBRATE_ANALOG;
 extern uint16_t calibrateTimer;
 extern uint16_t scan_timer;
 

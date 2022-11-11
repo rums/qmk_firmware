@@ -48,8 +48,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *                  ROW2COL = ROW = Anode (+), COL = Cathode (-, marked on diode)
  *
  */
-#define MATRIX_ROW_PINS { B5, B4, E6, B1 }
-#define MATRIX_COL_PINS { B6, B2, B3, D1, D0, C6 }
+#define MATRIX_ROW_PINS { B5, B4, E6, C6 }
+#define MATRIX_COL_PINS { B6, B2, B3, B1, D1, D0 }
 #define UNUSED_PINS
 
 #define RIGHT_TRIGGER_PIN F4
@@ -60,7 +60,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RIGHT_ANALOG_VERTICAL D4
 
 /* COL2ROW, ROW2COL */
-#define DIODE_DIRECTION COL2ROW
+#define DIODE_DIRECTION ROW2COL
 
 /*
  * Split Keyboard specific options, make sure you have 'SPLIT_KEYBOARD = yes' in your rules.mk, and define SOFT_SERIAL_PIN.

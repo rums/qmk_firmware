@@ -72,16 +72,16 @@ enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
-        KC_1, KC_2, XBOX_RB,        KC_3, KC_4, TO(_JOYSTICK_VANILLA),
-        XBOX_LB, AIR_LEFT, XBOX_A,    XBOX_X, AIR_RIGHT, XBOX_Y,
-        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,  XBOX_UP, PS_AIR, XBOX_DOWN,
-        XBOX_BACK, XBOX_START,      XBOX_LB, XBOX_RB),
+        KC_1,      KC_2,       XBOX_RB, XBOX_A,     XBOX_X,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
+        XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
+        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
+        XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
     [_JOYSTICK_VANILLA] = LAYOUT(
-        KC_1, KC_2, XBOX_RB,            KC_3, KC_4, TO(_WASD_GAMING),
+        KC_1, KC_2, XBOX_RB, XBOX_A,   XBOX_B, KC_3, KC_4, TO(_WASD_GAMING),
         XBOX_LB, XBOX_X, XBOX_A,       XBOX_B, XBOX_Y, XBOX_RB,
         XBOX_LEFT, XBOX_RIGHT, XBOX_LS,  XBOX_RS, XBOX_UP, XBOX_DOWN,
         XBOX_LEFT, XBOX_BACK,           XBOX_START, XBOX_DOWN),
-    [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, CALIBRATE_JOYSTICKS, RESET)
+    [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_W, KC_U, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, CALIBRATE_JOYSTICKS, RESET)
     };
 
 // joystick_config_t joystick_axes[JOYSTICK_AXES_COUNT] = {[0] = JOYSTICK_AXIS_VIRTUAL, [1] = JOYSTICK_AXIS_VIRTUAL, [2] = JOYSTICK_AXIS_VIRTUAL, [3] = JOYSTICK_AXIS_VIRTUAL, [4] = JOYSTICK_AXIS_VIRTUAL, [5] = JOYSTICK_AXIS_VIRTUAL};
@@ -92,6 +92,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 bool process_joystick_analogread() {
     if (is_keyboard_master()) {
         calibrateJoysticks();
+        calibrateTriggers(true);
         scanJoysticks();
         scanTriggers(IS_LAYER_ON(_WASD_GAMING));
         return true;

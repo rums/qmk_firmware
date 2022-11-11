@@ -9,7 +9,7 @@
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 uint16_t scan_timer     = 0;
-bool DO_CALIBRATE_JOYSTICKS = false;
+bool DO_CALIBRATE_ANALOG = false;
 uint16_t calibrateTimer = 0;
 
 int8_t applyCurve(int8_t value) {
@@ -66,10 +66,10 @@ struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8
     }
 #ifdef CONSOLE_ENABLE
     if (timer_elapsed(scan_timer) > 200 && axis1 == 0) {
-        uprintf("h: %d\t", horizontal);
-        uprintf("h: %d\t\t", horizontal_mapped);
-        uprintf("v: %d\t", vertical);
-        uprintf("v: %d\n", vertical_mapped);
+        // uprintf("h: %d\t", horizontal);
+        // uprintf("h: %d\t\t", horizontal_mapped);
+        // uprintf("v: %d\t", vertical);
+        // uprintf("v: %d\n", vertical_mapped);
         scan_timer = timer_read();
     }
 #endif
@@ -169,11 +169,10 @@ void scanJoysticks(void) {
 }
 
 void calibrateJoysticks(void) {
-    if (DO_CALIBRATE_JOYSTICKS) {
+    if (DO_CALIBRATE_ANALOG) {
         uint16_t calibrateTime = timer_elapsed(calibrateTimer);
         if (calibrateTime > 10000) {
-            DO_CALIBRATE_JOYSTICKS = false;
-            uprintf("Calibration complete\n");
+            uprintf("Joystick calibration complete\n");
             uprintf("L_H_ZERO: %d\n", L_H_ZERO);
             uprintf("L_V_ZERO: %d\n", L_V_ZERO);
             uprintf("R_H_ZERO: %d\n", R_H_ZERO);

@@ -24,13 +24,23 @@ int16_t mapToRange_trigger(int16_t value, int16_t min, int16_t max, int8_t min_o
     return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
 
-void controllerTriggers(uint8_t axis, int32_t rawVal, uint16_t axisZero, uint16_t minInput, uint16_t maxInput) {
+void controllerTriggers(uint8_t triggerPin, uint8_t axis, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, bool mirror) {
+    int32_t rawVal = analogReadPin(triggerPin);
+    if (mirror) {
+        rawVal = 1023 - rawVal;
+    }
+    if (rawVal < minInput) {
+        rawVal = minInput;
+    }
+    if (rawVal > maxInput) {
+        rawVal = maxInput;
+    }
     bool jsUpdated = false;
     if (rawVal > axisZero + 1) {
         if (rawVal > maxInput) {
             rawVal = maxInput;
         }
-        uint8_t minOutput = 0;
+        uint8_t minOutput = -128;
         uint8_t maxOutput = 127;
         // map rawVal from input range to output range
         int16_t rangedVal = mapToRange_trigger(rawVal, minInput, maxInput, minOutput, maxOutput);
@@ -107,15 +117,59 @@ int16_t smoothAnalog(int32_t readPin) {
     return avgVal;
 }
 
+uint16_t L_TRIGGER_MIN = 1023;
+uint16_t L_TRIGGER_MAX = 0;
+uint16_t L_TRIGGER_ZERO = 512;
+uint16_t R_TRIGGER_MIN = 1023;
+uint16_t R_TRIGGER_MAX = 0;
+uint16_t R_TRIGGER_ZERO = 512;
+
 void scanTriggers(bool wasdMode) {
-    int16_t rightRawVal = analogReadPin(RIGHT_TRIGGER_PIN);
-    int16_t leftRawVal = analogReadPin(LEFT_TRIGGER_PIN);
     if (wasdMode) {
         //wasdTriggers(leftRawVal, 510, 288, 510);
         //wasdTriggers(rightRawVal, 516, 528, 750);
     } else {
-        leftRawVal = 1023 - leftRawVal;
-        controllerTriggers(4, leftRawVal, 513, 528, 980);
-        controllerTriggers(5, rightRawVal, 516, 528, 980);
+        controllerTriggers(LEFT_TRIGGER_PIN, 4, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, true);
+        controllerTriggers(RIGHT_TRIGGER_PIN, 5, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, true);
+    }
+}
+
+void calibrateTriggers(bool mirror) {
+    if (DO_CALIBRATE_ANALOG) {
+        uint16_t calibrateTime = timer_elapsed(calibrateTimer);
+        if (calibrateTime > 10000) {
+            DO_CALIBRATE_ANALOG = false;
+            uprintf("Trigger calibration complete\n");
+            uprintf("L_TRIGGER_MIN: %d\n", L_TRIGGER_MIN);
+            uprintf("L_TRIGGER_MAX: %d\n", L_TRIGGER_MAX);
+            uprintf("L_TRIGGER_ZERO: %d\n", L_TRIGGER_ZERO);
+            uprintf("R_TRIGGER_MIN: %d\n", R_TRIGGER_MIN);
+            uprintf("R_TRIGGER_MAX: %d\n", R_TRIGGER_MAX);
+            uprintf("R_TRIGGER_ZERO: %d\n", R_TRIGGER_ZERO);
+            calibrateTimer = 0;
+        }
+        int16_t leftTrigger = analogReadPin(LEFT_TRIGGER_PIN);
+        int16_t rightTrigger = analogReadPin(RIGHT_TRIGGER_PIN);
+        if (mirror) {
+            leftTrigger = 1023 - leftTrigger;
+            rightTrigger = 1023 - rightTrigger;
+        }
+        if (calibrateTime < 100) {
+            // set zero values
+            L_TRIGGER_ZERO = leftTrigger;
+            R_TRIGGER_ZERO = rightTrigger;
+            L_TRIGGER_MIN = leftTrigger;
+            R_TRIGGER_MIN = leftTrigger;
+        }
+        else {
+            if (leftTrigger > L_TRIGGER_MAX) {
+                L_TRIGGER_MAX = leftTrigger;
+                uprintf("L_TRIGGER_MAX: %d\n", L_TRIGGER_MAX);
+            }
+            if (rightTrigger > R_TRIGGER_MAX) {
+                R_TRIGGER_MAX = rightTrigger;
+                uprintf("R_TRIGGER_MAX: %d\n", R_TRIGGER_MAX);
+            }
+        }
     }
 }
