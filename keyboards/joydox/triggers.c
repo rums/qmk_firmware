@@ -36,29 +36,13 @@ void controllerTriggers(uint8_t triggerPin, uint8_t axis, uint16_t axisZero, uin
         rawVal = maxInput;
     }
     bool jsUpdated = false;
-    if (rawVal > axisZero + 1) {
-        if (rawVal > maxInput) {
-            rawVal = maxInput;
-        }
-        uint8_t minOutput = -128;
-        uint8_t maxOutput = 127;
-        // map rawVal from input range to output range
-        int16_t rangedVal = mapToRange_trigger(rawVal, minInput, maxInput, minOutput, maxOutput);
-        if (joystick_status.axes[axis] != rangedVal) {
-            joystick_status.axes[axis] = rangedVal;
-            jsUpdated                  = true;
-        }
-    } else {
-        int16_t rangedVal = 0;
-        if (rangedVal != joystick_status.axes[axis]) {
-            if (abs(rangedVal - joystick_status.axes[axis]) < 20 || ignoreFrames == 10) {
-                joystick_status.axes[axis] = rangedVal;
-                jsUpdated                  = true;
-                ignoreFrames = 0;
-            } else {
-                ignoreFrames += 1;
-            }
-        }
+    uint8_t minOutput = -128;
+    uint8_t maxOutput = 127;
+    // map rawVal from input range to output range
+    int16_t rangedVal = mapToRange_trigger(rawVal, minInput, maxInput, minOutput, maxOutput);
+    if (joystick_status.axes[axis] != rangedVal) {
+        joystick_status.axes[axis] = rangedVal;
+        jsUpdated                  = true;
     }
     if (jsUpdated) {
         joystick_status.status |= JS_UPDATED;
