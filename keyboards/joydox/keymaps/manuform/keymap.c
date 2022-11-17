@@ -72,7 +72,7 @@ enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
-        KC_1,      KC_2,       XBOX_RB, XBOX_A,     XBOX_X,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
+        KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
         XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
         XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
         XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
@@ -174,11 +174,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case WD_MANUAL:
             if (record->event.pressed) {
                 wd_manual = true;
+                wd_first = true;
                 wd_timer = timer_read();
             }
             else {
-                wd_manual = true;
-                wd_timer = timer_read();
+                wd_second = true;
             }
             break;
         case PS_AIR:

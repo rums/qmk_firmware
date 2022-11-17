@@ -24,8 +24,12 @@ int16_t mapToRange_trigger(int16_t value, int16_t min, int16_t max, int8_t min_o
     return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
 
+// uint16_t debugTimer = 0;
 void controllerTriggers(uint8_t triggerPin, uint8_t axis, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, bool mirror) {
     int32_t rawVal = analogReadPin(triggerPin);
+    // if (timer_elapsed(debugTimer) > 200) {
+    //     uprintf("rawVal: %d, ", rawVal);
+    // }
     if (mirror) {
         rawVal = 1023 - rawVal;
     }
@@ -40,6 +44,10 @@ void controllerTriggers(uint8_t triggerPin, uint8_t axis, uint16_t axisZero, uin
     uint8_t maxOutput = 127;
     // map rawVal from input range to output range
     int16_t rangedVal = mapToRange_trigger(rawVal, minInput, maxInput, minOutput, maxOutput);
+    // if (timer_elapsed(debugTimer) > 200) {
+    //     uprintf("rangedVal: %d\n", rangedVal);
+    //     debugTimer = timer_read();
+    // }
     if (joystick_status.axes[axis] != rangedVal) {
         joystick_status.axes[axis] = rangedVal;
         jsUpdated                  = true;

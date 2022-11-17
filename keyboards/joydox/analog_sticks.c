@@ -24,7 +24,7 @@ int8_t applyCurve(int8_t value) {
     return value;
 }
 
-int16_t mapToRange_analog(int16_t value, int16_t min, int16_t max, int8_t min_out, int8_t max_out) {
+int16_t mapToRange_analog(int16_t value, int16_t min, int16_t max, int8_t min_out , int8_t max_out) {
     double slope = 1.0 * (max_out - min_out) / (max - min);
     return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
@@ -165,7 +165,7 @@ uint16_t R_V_ZERO = 512;
 
 void scanJoysticks(void) {
     scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, true);
-    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, false);
+    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, true);
 }
 
 void calibrateJoysticks(void) {
@@ -190,13 +190,13 @@ void calibrateJoysticks(void) {
         int16_t leftHorizontal = 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL);
         int16_t leftVertical = 1023 - analogReadPin(LEFT_ANALOG_VERTICAL);
         int16_t rightHorizontal = analogReadPin(RIGHT_ANALOG_HORIZONTAL);
-        int16_t rightVertical = analogReadPin(RIGHT_ANALOG_VERTICAL);
+        int16_t rightVertical = 1023 - analogReadPin(RIGHT_ANALOG_VERTICAL);
         if (calibrateTime < 100) {
             // set zero values
             L_H_ZERO = 1023 - leftHorizontal;
             L_V_ZERO = 1023 - leftVertical;
             R_H_ZERO = rightHorizontal;
-            R_V_ZERO = rightVertical;
+            R_V_ZERO = 1023 - rightVertical;
         }
         else {
             // set min and max values

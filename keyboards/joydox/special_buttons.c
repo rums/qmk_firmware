@@ -24,14 +24,19 @@ void handle_wd(void) {
 }
 
 bool    wd_manual = false;
+bool    wd_manual_stop = false;
 void handle_wd_manual(void) {
     if (wd_manual) {
-        if (timer_elapsed(wd_timer) > 1) {
-            unregister_joystick_button(BUTTON(XBOX_A));
-            wd_manual = false;
-        } else {
-            register_joystick_button(BUTTON(XBOX_A));
-        }
+        uprintf("wd_manual register\n");
+        register_joystick_button(BUTTON(XBOX_A));
+        wd_manual = false;
+        wd_manual_stop = true;
+        wd_timer = timer_read();
+    } else if (wd_manual_stop && (timer_elapsed(wd_timer) > 15)) {
+        uprintf("wd_manual unregister\n");
+        unregister_joystick_button(BUTTON(XBOX_A));
+        wd_manual = false;
+        wd_manual_stop = false;
     }
 }
 
