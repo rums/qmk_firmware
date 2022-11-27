@@ -90,14 +90,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // enum axes { Precision = 1, Axis1High = 2, Axis1Low = 4, Axis2High = 8, Axis2Low = 16 };
 
 bool process_joystick_analogread() {
-    if (is_keyboard_master()) {
-        calibrateJoysticks();
-        calibrateTriggers(true);
-        scanJoysticks();
-        scanTriggers(IS_LAYER_ON(_WASD_GAMING));
-        return true;
-    }
-    return false;
+    calibrateJoysticks();
+    calibrateTriggers(true);
+    scanJoysticks();
+    scanTriggers(IS_LAYER_ON(_WASD_GAMING));
+    return true;
 }
 
 void keyboard_post_init_user(void) {
@@ -118,11 +115,12 @@ void keyboard_post_init_user(void) {
 }
 
 void joystick_task(void) {
-    handle_wd();
+    // handle_wd();
     handle_wd_manual();
     handle_special_powerslide();
+    process_joystick_analogread();
 
-    if (process_joystick_analogread() && (joystick_status.status & JS_UPDATED)) {
+    if (joystick_status.status & JS_UPDATED) {
         joystick_flush();
         // send_joystick_packet(&joystick_status);
         // joystick_status.status &= ~JS_UPDATED;
@@ -173,12 +171,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             break;
         case WD_MANUAL:
             if (record->event.pressed) {
-                wd_manual = true;
-                wd_first = true;
-                wd_timer = timer_read();
+                wd_manual_first = true;
             }
             else {
-                wd_second = true;
+                wd_manual_second = true;
             }
             break;
         case PS_AIR:

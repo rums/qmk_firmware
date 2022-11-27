@@ -6,7 +6,9 @@ extern uint16_t wd_timer;
 extern bool     wd_first;
 extern bool     wd_second;
 extern bool     wd_stop;
-extern bool    wd_manual;
+extern bool    wd_manual_first;
+extern bool    wd_manual_second;
+extern bool    wd_manual_stop;
 
 extern bool special_powerslide_pressed;
 extern bool special_powerslide_released;

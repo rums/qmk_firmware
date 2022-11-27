@@ -189,13 +189,13 @@ void calibrateJoysticks(void) {
         }
         int16_t leftHorizontal = 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL);
         int16_t leftVertical = 1023 - analogReadPin(LEFT_ANALOG_VERTICAL);
-        int16_t rightHorizontal = analogReadPin(RIGHT_ANALOG_HORIZONTAL);
+        int16_t rightHorizontal = 1023 - analogReadPin(RIGHT_ANALOG_HORIZONTAL);
         int16_t rightVertical = 1023 - analogReadPin(RIGHT_ANALOG_VERTICAL);
         if (calibrateTime < 100) {
             // set zero values
             L_H_ZERO = 1023 - leftHorizontal;
             L_V_ZERO = 1023 - leftVertical;
-            R_H_ZERO = rightHorizontal;
+            R_H_ZERO = 1023 - rightHorizontal;
             R_V_ZERO = 1023 - rightVertical;
         }
         else {
