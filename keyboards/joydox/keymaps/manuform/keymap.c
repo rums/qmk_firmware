@@ -39,11 +39,11 @@ i2c_status_t i2c_start_bodge(uint8_t address, uint16_t timeout) {
 #endif
 
 // Defines names for use in layer keycodes and the keymap
-enum layer_names { _JOYSTICK_RL, _JOYSTICK_VANILLA, _WASD_GAMING };
+enum layer_names { _JOYSTICK_RL, _JOYSTICK_RL_BETA, _JOYSTICK_VANILLA, _WASD_GAMING };
 
 // Defines the ke
 // ycodes used by our macros in process_record_user
-enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, WD, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS };
+enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS };
 
 // enum controller_mappings { XBOX_A = 3, XBOX_B = 19, XBOX_X = 7, XBOX_Y = 9, XBOX_LB = 2, XBOX_RB = 4, XBOX_BACK = 10, XBOX_START = 14, XBOX_LS = 1, XBOX_RS = 8, XBOX_UP = 17, XBOX_DOWN = 18, XBOX_LEFT = 11, XBOX_RIGHT = 12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
 // enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = JS_BUTTON7, XBOX_Y = JS_BUTTON9, XBOX_LB = JS_BUTTON2, XBOX_RB = JS_BUTTON4, XBOX_BACK = JS_BUTTON10, XBOX_START = JS_BUTTON14, XBOX_LS = JS_BUTTON1, XBOX_RS = JS_BUTTON8, XBOX_UP = JS_BUTTON17, XBOX_DOWN = JS_BUTTON18, XBOX_LEFT = JS_BUTTON11, XBOX_RIGHT = JS_BUTTON12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
@@ -72,6 +72,11 @@ enum custom_keycodes { JOYSTICK_RL = SAFE_RANGE, JOYSTICK_VANILLA, WASD_GAMING, 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
+        KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_RL_BETA),
+        XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
+        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
+        XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
+    [_JOYSTICK_RL_BETA] = LAYOUT(
         KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
         XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
         XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
@@ -92,7 +97,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 bool process_joystick_analogread() {
     calibrateJoysticks();
     calibrateTriggers(true);
-    scanJoysticks();
+    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_UP) : 0, IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_DOWN) : 0);
     scanTriggers(IS_LAYER_ON(_WASD_GAMING));
     return true;
 }
@@ -179,10 +184,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             break;
         case PS_AIR:
             if (record->event.pressed) {
-                special_powerslide_pressed = true;
+                // special_powerslide_pressed = true;
+                if (IS_LAYER_ON(_JOYSTICK_RL_BETA)) {
+                    USE_AXIS_TAPS = true;
+                }
+                else {
+                    USE_AXIS_TAPS = false;
+                }
             } else {
-                special_powerslide_pressed = false;
-                special_powerslide_released = true;
+                // special_powerslide_pressed = false;
+                // special_powerslide_released = true;
+                USE_AXIS_TAPS = false;
             }
             break;
         case AIR_LEFT:
@@ -207,7 +219,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             } else {
                 air_roll_pressed = false;
             }
-            handle_air_roll_state();
+            // handle_air_roll_state();
             break;
         // case JOYSTICK_LT_TOGGLE:
         //     if (record->event.pressed) {

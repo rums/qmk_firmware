@@ -29,7 +29,7 @@ int16_t mapToRange_analog(int16_t value, int16_t min, int16_t max, int8_t min_ou
     return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
 
-struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero, bool mirror) {
+struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero, bool mirror, uint16_t replaceYPos, uint16_t replaceYNeg) {
     int16_t horizontal = analogReadPin(horizontalPin);
     int16_t vertical   = analogReadPin(verticalPin);
     if (mirror) {
@@ -60,7 +60,17 @@ struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8
         joystick_status.axes[axis1] = horizontal_mapped;
         joystick_status.status |= JS_UPDATED;
     }
-    if (joystick_status.axes[axis2] != vertical_mapped) {
+    if (replaceYPos != 0 && vertical_mapped > 40) {
+        register_joystick_button(replaceYPos);
+    }
+    else if (replaceYNeg != 0 && vertical_mapped < -40) {
+        register_joystick_button(replaceYNeg);
+    }
+    else if (replaceYNeg != 0 && replaceYPos != 0) {
+        unregister_joystick_button(replaceYNeg);
+        unregister_joystick_button(replaceYPos);
+    }
+    else if (replaceYPos == 0 && joystick_status.axes[axis2] != vertical_mapped) {
         joystick_status.axes[axis2] = vertical_mapped;
         joystick_status.status |= JS_UPDATED;
     }
@@ -159,13 +169,13 @@ uint16_t R_H_MIN = 1023;
 uint16_t R_H_MAX = 0;
 uint16_t R_V_MIN = 1023;
 uint16_t R_V_MAX = 0;
-uint16_t R_DEADZONE = 20;
+uint16_t R_DEADZONE = 25;
 uint16_t R_H_ZERO = 512;
 uint16_t R_V_ZERO = 512;
 
-void scanJoysticks(void) {
-    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, true);
-    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, true);
+void scanJoysticks(uint16_t replaceRYPos, uint16_t replaceRYNeg) {
+    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, true, 0, 0);
+    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, false, replaceRYPos, replaceRYNeg);
 }
 
 void calibrateJoysticks(void) {
@@ -189,14 +199,14 @@ void calibrateJoysticks(void) {
         }
         int16_t leftHorizontal = 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL);
         int16_t leftVertical = 1023 - analogReadPin(LEFT_ANALOG_VERTICAL);
-        int16_t rightHorizontal = 1023 - analogReadPin(RIGHT_ANALOG_HORIZONTAL);
-        int16_t rightVertical = 1023 - analogReadPin(RIGHT_ANALOG_VERTICAL);
+        int16_t rightHorizontal = analogReadPin(RIGHT_ANALOG_HORIZONTAL);
+        int16_t rightVertical = analogReadPin(RIGHT_ANALOG_VERTICAL);
         if (calibrateTime < 100) {
             // set zero values
             L_H_ZERO = 1023 - leftHorizontal;
             L_V_ZERO = 1023 - leftVertical;
-            R_H_ZERO = 1023 - rightHorizontal;
-            R_V_ZERO = 1023 - rightVertical;
+            R_H_ZERO = rightHorizontal;
+            R_V_ZERO = rightVertical;
         }
         else {
             // set min and max values
