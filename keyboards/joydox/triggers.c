@@ -4,7 +4,6 @@
 #include "analog.h"
 
 uint8_t ignoreFrames = 0;
-bool USE_AXIS_TAPS = false;
 
 uint16_t L_TRIGGER_MIN = 1023;
 uint16_t L_TRIGGER_MAX = 0;
@@ -34,7 +33,7 @@ int16_t mapToRange_trigger(int16_t value, int16_t min, int16_t max, int8_t min_o
 }
 
 // uint16_t debugTimer = 0;
-void controllerTriggers(uint8_t triggerPin, uint8_t axis, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, bool mirror, bool useTapAxis, uint8_t tapAxis, bool negativeTap) {
+uint16_t getTriggerValue(uint8_t triggerPin, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, uint8_t minOutput, uint8_t maxOutput, bool mirror) {
     int32_t rawVal = analogReadPin(triggerPin);
     // if (timer_elapsed(debugTimer) > 200) {
     //     uprintf("rawVal: %d, ", rawVal);
@@ -48,32 +47,13 @@ void controllerTriggers(uint8_t triggerPin, uint8_t axis, uint16_t axisZero, uin
     if (rawVal > maxInput) {
         rawVal = maxInput;
     }
-    uint8_t minOutput = -128;
-    uint8_t maxOutput = 127;
     // map rawVal from input range to output range
     int16_t rangedVal = mapToRange_trigger(rawVal, minInput, maxInput, minOutput, maxOutput);
     // if (timer_elapsed(debugTimer) > 200) {
     //     uprintf("rangedVal: %d\n", rangedVal);
     //     debugTimer = timer_read();
     // }
-    if (joystick_status.axes[axis] != rangedVal) {
-        joystick_status.axes[axis] = rangedVal;
-        if (useTapAxis) {
-            // deadzone of 10
-            if (rawVal > axisZero + 10 || rawVal < axisZero - 10) {
-                if (negativeTap) {
-                    joystick_status.axes[tapAxis] = mapToRange_trigger(rawVal, minInput, maxInput, -1, -128);
-                }
-                else {
-                    joystick_status.axes[tapAxis] = mapToRange_trigger(rawVal, minInput, maxInput, 0, 127);
-                }
-            }
-        }
-        else {
-            joystick_status.axes[tapAxis] = 0;
-        }
-        joystick_status.status |= JS_UPDATED;
-    }
+    return rangedVal;
 }
 
 void wasdTriggers(int32_t rawVal, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, bool triggerToggle) {
@@ -128,14 +108,27 @@ int16_t smoothAnalog(int32_t readPin) {
     return avgVal;
 }
 
-void scanTriggers(bool wasdMode) {
-    if (wasdMode) {
-        //wasdTriggers(leftRawVal, 510, 288, 510);
-        //wasdTriggers(rightRawVal, 516, 528, 750);
-    } else {
-        controllerTriggers(LEFT_TRIGGER_PIN, 4, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, true, USE_AXIS_TAPS, 3, true);
-        controllerTriggers(RIGHT_TRIGGER_PIN, 5, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, true, USE_AXIS_TAPS, 3, false);
+void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis) {
+    int16_t leftTrigVal = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, -128, 127, true);
+    int16_t rightTrigVal = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, -128, 127, true);
+    joystick_status.axes[axis1] = leftTrigVal;
+    joystick_status.axes[axis2] = rightTrigVal;
+    if (useTapAxis) {
+        // deadzone of 10
+        if (leftTrigVal > -118 || rightTrigVal > -118) {
+            int16_t leftTapVal = mapToRange_trigger(leftTrigVal, -128, 127, -128, 0);
+            int16_t rightTapVal = mapToRange_trigger(rightTrigVal, -128, 127, 127, 0);
+            int16_t combinedTapVal = leftTapVal + rightTapVal;
+            joystick_status.axes[tapAxis] = combinedTapVal;
+        }
+        else {
+            joystick_status.axes[tapAxis] = 0;
+        }
     }
+    else {
+        joystick_status.axes[tapAxis] = 0;
+    }
+    joystick_status.status |= JS_UPDATED;
 }
 
 void calibrateTriggers(bool mirror) {

@@ -79,7 +79,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL_BETA] = LAYOUT(
         KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
         XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
-        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
+        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_X, PS_AIR,    XBOX_Y,
         XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
     [_JOYSTICK_VANILLA] = LAYOUT(
         KC_1, KC_2, XBOX_RB, XBOX_A,   XBOX_B, KC_3, KC_4, TO(_WASD_GAMING),
@@ -94,11 +94,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // static uint8_t axesFlags = 0;
 // enum axes { Precision = 1, Axis1High = 2, Axis1Low = 4, Axis2High = 8, Axis2Low = 16 };
 
+bool USE_SECONDARY_AXIS = false;
 bool process_joystick_analogread() {
     calibrateJoysticks();
     calibrateTriggers(true);
-    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_UP) : 0, IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_DOWN) : 0);
-    scanTriggers(IS_LAYER_ON(_WASD_GAMING));
+    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_UP) : 0);
+    scanTriggers(IS_LAYER_ON(_WASD_GAMING), 5, 4, 3, USE_SECONDARY_AXIS);
     return true;
 }
 
@@ -186,15 +187,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 // special_powerslide_pressed = true;
                 if (IS_LAYER_ON(_JOYSTICK_RL_BETA)) {
-                    USE_AXIS_TAPS = true;
+                    USE_SECONDARY_AXIS = true;
                 }
                 else {
-                    USE_AXIS_TAPS = false;
+                    USE_SECONDARY_AXIS = false;
                 }
             } else {
                 // special_powerslide_pressed = false;
                 // special_powerslide_released = true;
-                USE_AXIS_TAPS = false;
+                USE_SECONDARY_AXIS = false;
             }
             break;
         case AIR_LEFT:
