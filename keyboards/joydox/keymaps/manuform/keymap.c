@@ -72,21 +72,21 @@ enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
-        KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_RL_BETA),
+        KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
         XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
         XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
         XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
-    [_JOYSTICK_RL_BETA] = LAYOUT(
-        KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
-        XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
-        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_X, PS_AIR,    XBOX_Y,
-        XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
+    // [_JOYSTICK_RL_BETA] = LAYOUT(
+    //     KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
+    //     XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
+    //     XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_X, PS_AIR,    XBOX_Y,
+    //     XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
     [_JOYSTICK_VANILLA] = LAYOUT(
-        KC_1, KC_2, XBOX_RB, XBOX_A,   XBOX_B, KC_3, KC_4, TO(_WASD_GAMING),
+        KC_1, KC_2, XBOX_RB, XBOX_A,   XBOX_B, KC_3, KC_4, TO(_JOYSTICK_RL),
         XBOX_LB, XBOX_X, XBOX_A,       XBOX_B, XBOX_Y, XBOX_RB,
         XBOX_LEFT, XBOX_RIGHT, XBOX_LS,  XBOX_RS, XBOX_UP, XBOX_DOWN,
-        XBOX_LEFT, XBOX_BACK,           XBOX_START, XBOX_DOWN),
-    [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_W, KC_U, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, CALIBRATE_JOYSTICKS, RESET)
+        CALIBRATE_JOYSTICKS, XBOX_BACK,           XBOX_START, RESET),
+    // [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_W, KC_U, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, CALIBRATE_JOYSTICKS, RESET)
     };
 
 // joystick_config_t joystick_axes[JOYSTICK_AXES_COUNT] = {[0] = JOYSTICK_AXIS_VIRTUAL, [1] = JOYSTICK_AXIS_VIRTUAL, [2] = JOYSTICK_AXIS_VIRTUAL, [3] = JOYSTICK_AXIS_VIRTUAL, [4] = JOYSTICK_AXIS_VIRTUAL, [5] = JOYSTICK_AXIS_VIRTUAL};
@@ -98,7 +98,8 @@ bool USE_SECONDARY_AXIS = false;
 bool process_joystick_analogread() {
     calibrateJoysticks();
     calibrateTriggers(true);
-    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL_BETA) ? BUTTON(XBOX_UP) : 0);
+    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_UP) : 0);
+    // scanJoysticks(BUTTON(XBOX_DOWN), BUTTON(XBOX_UP));
     scanTriggers(IS_LAYER_ON(_WASD_GAMING), 5, 4, 3, USE_SECONDARY_AXIS);
     return true;
 }
@@ -186,7 +187,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case PS_AIR:
             if (record->event.pressed) {
                 // special_powerslide_pressed = true;
-                if (IS_LAYER_ON(_JOYSTICK_RL_BETA)) {
+                if (IS_LAYER_ON(_JOYSTICK_RL)) {
                     USE_SECONDARY_AXIS = true;
                 }
                 else {
