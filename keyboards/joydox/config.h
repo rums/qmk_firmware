@@ -52,8 +52,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MATRIX_COL_PINS { B6, B2, B3, B1, D1, D0 }
 #define UNUSED_PINS
 
-#define RIGHT_TRIGGER_PIN F4
-#define LEFT_TRIGGER_PIN F5
+#define RIGHT_TRIGGER_PIN F5
+#define LEFT_TRIGGER_PIN F4
 #define LEFT_ANALOG_HORIZONTAL F6
 #define LEFT_ANALOG_VERTICAL F7
 #define RIGHT_ANALOG_HORIZONTAL D7

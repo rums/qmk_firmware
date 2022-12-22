@@ -111,7 +111,10 @@ int16_t smoothAnalog(int32_t readPin) {
 void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis) {
     int16_t leftTrigVal = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, -128, 127, true);
     int16_t rightTrigVal = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, -128, 127, true);
-    joystick_status.axes[axis1] = leftTrigVal;
+    // bit hacky -- if we're using the tap axis, we don't engage the first axis
+    if (!useTapAxis) {
+        joystick_status.axes[axis1] = leftTrigVal;
+    }
     joystick_status.axes[axis2] = rightTrigVal;
     if (useTapAxis) {
         // deadzone of 10

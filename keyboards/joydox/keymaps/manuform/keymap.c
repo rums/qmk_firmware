@@ -73,8 +73,8 @@ enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
         KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
-        XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
-        XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_UP, PS_AIR,    XBOX_DOWN,
+        XBOX_LB,   XBOX_LS,   XBOX_A,                       XBOX_X, XBOX_RS, XBOX_B,
+        XBOX_LEFT, XBOX_B, WD_MANUAL,                    XBOX_X, PS_AIR,    XBOX_Y,
         XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
     // [_JOYSTICK_RL_BETA] = LAYOUT(
     //     KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
