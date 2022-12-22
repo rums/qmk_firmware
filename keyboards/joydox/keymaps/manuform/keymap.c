@@ -43,7 +43,7 @@ enum layer_names { _JOYSTICK_RL, _JOYSTICK_RL_BETA, _JOYSTICK_VANILLA, _WASD_GAM
 
 // Defines the ke
 // ycodes used by our macros in process_record_user
-enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS };
+enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, ANALOG_AIR, ANALOG_AIR_LEFT, ANALOG_AIR_RIGHT, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS };
 
 // enum controller_mappings { XBOX_A = 3, XBOX_B = 19, XBOX_X = 7, XBOX_Y = 9, XBOX_LB = 2, XBOX_RB = 4, XBOX_BACK = 10, XBOX_START = 14, XBOX_LS = 1, XBOX_RS = 8, XBOX_UP = 17, XBOX_DOWN = 18, XBOX_LEFT = 11, XBOX_RIGHT = 12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
 // enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = JS_BUTTON7, XBOX_Y = JS_BUTTON9, XBOX_LB = JS_BUTTON2, XBOX_RB = JS_BUTTON4, XBOX_BACK = JS_BUTTON10, XBOX_START = JS_BUTTON14, XBOX_LS = JS_BUTTON1, XBOX_RS = JS_BUTTON8, XBOX_UP = JS_BUTTON17, XBOX_DOWN = JS_BUTTON18, XBOX_LEFT = JS_BUTTON11, XBOX_RIGHT = JS_BUTTON12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
@@ -72,10 +72,10 @@ enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, PS_AIR, AIR_LEFT, AIR_RIGHT, 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
-        KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
-        XBOX_LB,   XBOX_LS,   XBOX_A,                       XBOX_X, XBOX_RS, XBOX_B,
-        XBOX_LEFT, XBOX_B, WD_MANUAL,                    XBOX_X, PS_AIR,    XBOX_Y,
-        XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
+        KC_1,      KC_2,              XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,             TO(_JOYSTICK_VANILLA),
+        XBOX_LB,   XBOX_LS,   XBOX_A,                             XBOX_X,  XBOX_RS,          XBOX_B,
+        XBOX_LB, ANALOG_AIR_LEFT,            WD_MANUAL,                          XBOX_X,  ANALOG_AIR_RIGHT, XBOX_Y,
+        XBOX_BACK, XBOX_START,                                            XBOX_LB,   XBOX_RB),
     // [_JOYSTICK_RL_BETA] = LAYOUT(
     //     KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
     //     XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
@@ -94,13 +94,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // static uint8_t axesFlags = 0;
 // enum axes { Precision = 1, Axis1High = 2, Axis1Low = 4, Axis2High = 8, Axis2Low = 16 };
 
-bool USE_SECONDARY_AXIS = false;
+bool USE_TAP_AXIS_1 = false;
+bool USE_TAP_AXIS_2 = false;
 bool process_joystick_analogread() {
     calibrateJoysticks();
     calibrateTriggers(true);
     scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_UP) : 0);
     // scanJoysticks(BUTTON(XBOX_DOWN), BUTTON(XBOX_UP));
-    scanTriggers(IS_LAYER_ON(_WASD_GAMING), 5, 4, 3, USE_SECONDARY_AXIS);
+    scanTriggers(IS_LAYER_ON(_WASD_GAMING), 5, 4, 3, USE_TAP_AXIS_1, USE_TAP_AXIS_2);
     return true;
 }
 
@@ -184,19 +185,46 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 wd_manual_second = true;
             }
             break;
-        case PS_AIR:
+        case ANALOG_AIR:
             if (record->event.pressed) {
                 // special_powerslide_pressed = true;
                 if (IS_LAYER_ON(_JOYSTICK_RL)) {
-                    USE_SECONDARY_AXIS = true;
+                    USE_TAP_AXIS_1 = true;
+                    USE_TAP_AXIS_2 = true;
                 }
                 else {
-                    USE_SECONDARY_AXIS = false;
+                    USE_TAP_AXIS_1 = false;
+                    USE_TAP_AXIS_2 = false;
                 }
             } else {
                 // special_powerslide_pressed = false;
                 // special_powerslide_released = true;
-                USE_SECONDARY_AXIS = false;
+                USE_TAP_AXIS_1 = false;
+                USE_TAP_AXIS_2 = false;
+            }
+            break;
+        case ANALOG_AIR_LEFT:
+            if (record->event.pressed) {
+                if (IS_LAYER_ON(_JOYSTICK_RL)) {
+                    USE_TAP_AXIS_1 = true;
+                }
+                else {
+                    USE_TAP_AXIS_1 = true;
+                }
+            } else {
+                USE_TAP_AXIS_1 = false;
+            }
+            break;
+        case ANALOG_AIR_RIGHT:
+            if (record->event.pressed) {
+                if (IS_LAYER_ON(_JOYSTICK_RL)) {
+                    USE_TAP_AXIS_2 = true;
+                }
+                else {
+                    USE_TAP_AXIS_2 = false;
+                }
+            } else {
+                USE_TAP_AXIS_2 = false;
             }
             break;
         case AIR_LEFT:

@@ -2,6 +2,7 @@
 #include <string.h>
 #include "triggers.h"
 #include "analog.h"
+#include "math.h"
 
 uint8_t ignoreFrames = 0;
 
@@ -108,21 +109,18 @@ int16_t smoothAnalog(int32_t readPin) {
     return avgVal;
 }
 
-void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis) {
+void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis1, bool useTapAxis2) {
     int16_t leftTrigVal = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, -128, 127, true);
     int16_t rightTrigVal = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, -128, 127, true);
-    // bit hacky -- if we're using the tap axis, we don't engage the first axis
-    if (!useTapAxis) {
-        joystick_status.axes[axis1] = leftTrigVal;
-    }
+    joystick_status.axes[axis1] = leftTrigVal;
     joystick_status.axes[axis2] = rightTrigVal;
-    if (useTapAxis) {
+    if (useTapAxis1 || useTapAxis2) {
         // deadzone of 10
         if (leftTrigVal > -118 || rightTrigVal > -118) {
-            int16_t leftTapVal = mapToRange_trigger(leftTrigVal, -128, 127, -128, 0);
-            int16_t rightTapVal = mapToRange_trigger(rightTrigVal, -128, 127, 127, 0);
-            int16_t combinedTapVal = leftTapVal + rightTapVal;
-            joystick_status.axes[tapAxis] = combinedTapVal;
+            int16_t leftTapVal = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis2 ? -128 : 127);
+            int16_t rightTapVal = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis2 ? -128 : 127);
+            int16_t maxTapVal = useTapAxis2 ? MIN(leftTapVal, rightTapVal) : MAX(leftTapVal, rightTapVal);
+            joystick_status.axes[tapAxis] = maxTapVal;
         }
         else {
             joystick_status.axes[tapAxis] = 0;
