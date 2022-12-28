@@ -117,9 +117,9 @@ void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, 
     if (useTapAxis1 || useTapAxis2) {
         // deadzone of 10
         if (leftTrigVal > -118 || rightTrigVal > -118) {
-            int16_t leftTapVal = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis2 ? -128 : 127);
-            int16_t rightTapVal = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis2 ? -128 : 127);
-            int16_t maxTapVal = useTapAxis2 ? MIN(leftTapVal, rightTapVal) : MAX(leftTapVal, rightTapVal);
+            int16_t leftTapVal = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
+            int16_t rightTapVal = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
+            int16_t maxTapVal = useTapAxis1 ? MAX(leftTapVal, rightTapVal) : MIN(leftTapVal, rightTapVal);
             joystick_status.axes[tapAxis] = maxTapVal;
         }
         else {
