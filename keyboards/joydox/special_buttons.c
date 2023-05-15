@@ -5,6 +5,7 @@ uint16_t wd_timer;
 bool     wd_first  = false;
 bool     wd_second = false;
 bool     wd_stop   = false;
+struct two_button_state powerslide_state = {false, false, false, false};
 
 void handle_wd(void) {
     if (wd_first) {
@@ -49,6 +50,8 @@ void handle_wd_manual(void) {
 
 bool special_powerslide_pressed = false;
 bool special_powerslide_released = false;
+bool powerslide_pressed = false;
+bool powerslide_released = false;
 bool air_left_pressed = false;
 bool air_right_pressed = false;
 bool air_roll_pressed = false;
@@ -95,5 +98,15 @@ void handle_special_powerslide(void) {
         unregister_joystick_button(BUTTON(XBOX_LB));
         unregister_joystick_button(BUTTON(XBOX_B));
         special_powerslide_released = false;
+    }
+}
+
+void handle_powerslide(void) {
+    if (powerslide_state.button1_pressed || powerslide_state.button2_pressed) {
+        register_joystick_button(BUTTON(XBOX_LB));
+    } else if ((powerslide_state.button1_released || powerslide_state.button2_released) && (powerslide_state.button1_released || !powerslide_state.button1_pressed) && (powerslide_state.button2_released || !powerslide_state.button2_pressed)) {
+        unregister_joystick_button(BUTTON(XBOX_LB));
+        powerslide_state.button1_released = false;
+        powerslide_state.button2_released = false;
     }
 }

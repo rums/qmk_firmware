@@ -169,16 +169,21 @@ uint16_t R_H_MIN = 1023;
 uint16_t R_H_MAX = 0;
 uint16_t R_V_MIN = 1023;
 uint16_t R_V_MAX = 0;
-uint16_t R_DEADZONE = 25;
+uint16_t R_DEADZONE = 30;
 uint16_t R_H_ZERO = 512;
 uint16_t R_V_ZERO = 512;
 
-void scanJoysticks(uint16_t replaceRYPos, uint16_t replaceRYNeg) {
-    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, true, 0, 0);
-    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, false, replaceRYPos, replaceRYNeg);
+void scanJoysticks(uint16_t replaceRYPos, uint16_t replaceRYNeg, bool mirrorLeft, bool mirrorRight) {
+    if (replaceRYNeg == 0 && replaceRYPos == 0) {
+        scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, 0, 0);
+        scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, 0, 0);
+    } else {
+        scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, 0, 0);
+        scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, replaceRYPos, replaceRYNeg);
+    }
 }
 
-void calibrateJoysticks(void) {
+void calibrateJoysticks(bool mirrorLeft, bool mirrorRight) {
     if (DO_CALIBRATE_ANALOG) {
         uint16_t calibrateTime = timer_elapsed(calibrateTimer);
         if (calibrateTime > 10000) {
@@ -197,14 +202,14 @@ void calibrateJoysticks(void) {
             uprintf("R_V_MAX: %d\n", R_V_MAX);
             calibrateTimer = 0;
         }
-        int16_t leftHorizontal = 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL);
-        int16_t leftVertical = 1023 - analogReadPin(LEFT_ANALOG_VERTICAL);
-        int16_t rightHorizontal = analogReadPin(RIGHT_ANALOG_HORIZONTAL);
-        int16_t rightVertical = analogReadPin(RIGHT_ANALOG_VERTICAL);
+        int16_t leftHorizontal = mirrorLeft ? 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL) : analogReadPin(LEFT_ANALOG_HORIZONTAL);
+        int16_t leftVertical = mirrorLeft ? 1023 - analogReadPin(LEFT_ANALOG_VERTICAL) : analogReadPin(LEFT_ANALOG_VERTICAL);
+        int16_t rightHorizontal = mirrorRight ? 1023 - analogReadPin(RIGHT_ANALOG_HORIZONTAL) : analogReadPin(RIGHT_ANALOG_HORIZONTAL);
+        int16_t rightVertical = mirrorRight ? 1023 - analogReadPin(RIGHT_ANALOG_VERTICAL) : analogReadPin(RIGHT_ANALOG_VERTICAL);
         if (calibrateTime < 100) {
             // set zero values
-            L_H_ZERO = 1023 - leftHorizontal;
-            L_V_ZERO = 1023 - leftVertical;
+            L_H_ZERO = leftHorizontal;
+            L_V_ZERO = leftVertical;
             R_H_ZERO = rightHorizontal;
             R_V_ZERO = rightVertical;
         }

@@ -73,8 +73,8 @@ enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, ANALOG_AIR, ANALOG_AIR_LEFT, 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
         KC_1,      KC_2,              XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,             TO(_JOYSTICK_VANILLA),
-        XBOX_LB,   XBOX_LS,   XBOX_A,                             XBOX_X,  XBOX_RS,          XBOX_B,
-        XBOX_LB, ANALOG_AIR_LEFT,            WD_MANUAL,                          XBOX_X,  ANALOG_AIR_RIGHT, XBOX_Y,
+        XBOX_B,   ANALOG_AIR_LEFT,   XBOX_A,                             XBOX_X,  ANALOG_AIR_RIGHT,          XBOX_Y,
+        XBOX_LB, XBOX_LS,            WD_MANUAL,                          WD_MANUAL,  XBOX_RS, XBOX_Y,
         XBOX_BACK, XBOX_START,                                            XBOX_LB,   XBOX_RB),
     // [_JOYSTICK_RL_BETA] = LAYOUT(
     //     KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
@@ -97,11 +97,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 bool USE_TAP_AXIS_1 = false;
 bool USE_TAP_AXIS_2 = false;
 bool process_joystick_analogread() {
-    calibrateJoysticks();
-    calibrateTriggers(true);
-    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_UP) : 0);
+    calibrateJoysticks(false, false);
+    calibrateTriggers(false, false);
+    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_UP) : 0, false, false);
     // scanJoysticks(BUTTON(XBOX_DOWN), BUTTON(XBOX_UP));
-    scanTriggers(IS_LAYER_ON(_WASD_GAMING), 5, 4, 3, USE_TAP_AXIS_1, USE_TAP_AXIS_2);
+    scanTriggers(IS_LAYER_ON(_WASD_GAMING), 4, 5, 3, USE_TAP_AXIS_1, USE_TAP_AXIS_2, false, false);
     return true;
 }
 
@@ -125,7 +125,8 @@ void keyboard_post_init_user(void) {
 void joystick_task(void) {
     // handle_wd();
     handle_wd_manual();
-    handle_special_powerslide();
+    //handle_special_powerslide();
+    handle_powerslide();
     process_joystick_analogread();
 
     if (joystick_status.status & JS_UPDATED) {
@@ -205,26 +206,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             break;
         case ANALOG_AIR_LEFT:
             if (record->event.pressed) {
-                if (IS_LAYER_ON(_JOYSTICK_RL)) {
-                    USE_TAP_AXIS_1 = true;
-                }
-                else {
-                    USE_TAP_AXIS_1 = true;
-                }
+                USE_TAP_AXIS_1 = true;
+                powerslide_state.button1_pressed = true;
             } else {
                 USE_TAP_AXIS_1 = false;
+                powerslide_state.button1_pressed = false;
+                powerslide_state.button1_released = true;
             }
             break;
         case ANALOG_AIR_RIGHT:
             if (record->event.pressed) {
-                if (IS_LAYER_ON(_JOYSTICK_RL)) {
-                    USE_TAP_AXIS_2 = true;
-                }
-                else {
-                    USE_TAP_AXIS_2 = false;
-                }
+                USE_TAP_AXIS_2 = true;
+                powerslide_state.button2_pressed = true;
             } else {
                 USE_TAP_AXIS_2 = false;
+                powerslide_state.button2_pressed = false;
+                powerslide_state.button2_released = true;
             }
             break;
         case AIR_LEFT:

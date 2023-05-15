@@ -6,11 +6,11 @@
 
 uint8_t ignoreFrames = 0;
 
-uint16_t L_TRIGGER_MIN = 1023;
-uint16_t L_TRIGGER_MAX = 0;
+uint16_t L_TRIGGER_MIN  = 1023;
+uint16_t L_TRIGGER_MAX  = 0;
 uint16_t L_TRIGGER_ZERO = 512;
-uint16_t R_TRIGGER_MIN = 1023;
-uint16_t R_TRIGGER_MAX = 0;
+uint16_t R_TRIGGER_MIN  = 1023;
+uint16_t R_TRIGGER_MAX  = 0;
 uint16_t R_TRIGGER_ZERO = 512;
 
 #define QWIIC_TRIGGER_LEFT_ADDR (0x64 << 1)
@@ -18,7 +18,9 @@ uint16_t R_TRIGGER_ZERO = 512;
 #ifdef SPLIT_KEYBOARD
 static uint8_t trigger_value = 0;
 
-void trigger_state_raw(uint8_t slave_state) { memcpy(&slave_state, &trigger_value, sizeof(uint8_t)); }
+void trigger_state_raw(uint8_t slave_state) {
+    memcpy(&slave_state, &trigger_value, sizeof(uint8_t));
+}
 
 void trigger_update_raw(uint8_t slave_state) {
     if (!is_keyboard_master()) {
@@ -33,11 +35,11 @@ int16_t mapToRange_trigger(int16_t value, int16_t min, int16_t max, int8_t min_o
     // return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
 
-// uint16_t debugTimer = 0;
+// int16_t debugTimer = 0;
 uint16_t getTriggerValue(uint8_t triggerPin, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, uint8_t minOutput, uint8_t maxOutput, bool mirror) {
     int32_t rawVal = analogReadPin(triggerPin);
-    // if (timer_elapsed(debugTimer) > 200) {
-    //     uprintf("rawVal: %d, ", rawVal);
+    // if (timer_elapsed(debugTimer) > 1000) {
+    //     uprintf("triggerPin: %d, rawVal: %d\n", triggerPin, rawVal);
     // }
     if (mirror) {
         rawVal = 1023 - rawVal;
@@ -86,8 +88,8 @@ int16_t smoothAnalog(int32_t readPin) {
         return prev_right_trigger;
     }
     const uint8_t sampleCount = 20;
-    int16_t rawVals[20] = {0};
-    int16_t avgVal    = 0;
+    int16_t       rawVals[20] = {0};
+    int16_t       avgVal      = 0;
     for (uint8_t i = 0; i < sampleCount; i++) {
         rawVals[i] = analogReadPin(readPin);
         avgVal += rawVals[i];
@@ -109,30 +111,24 @@ int16_t smoothAnalog(int32_t readPin) {
     return avgVal;
 }
 
-void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis1, bool useTapAxis2) {
-    int16_t leftTrigVal = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, -128, 127, true);
-    int16_t rightTrigVal = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, -128, 127, true);
+void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis1, bool useTapAxis2, bool mirrorLeft, bool mirrorRight) {
+    int16_t leftTrigVal         = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, -128, 127, mirrorLeft);
+    int16_t rightTrigVal        = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, -128, 127, mirrorRight);
     joystick_status.axes[axis1] = leftTrigVal;
     joystick_status.axes[axis2] = rightTrigVal;
-    if (useTapAxis1 || useTapAxis2) {
-        // deadzone of 10
-        if (leftTrigVal > -118 || rightTrigVal > -118) {
-            int16_t leftTapVal = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
-            int16_t rightTapVal = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
-            int16_t maxTapVal = useTapAxis1 ? MAX(leftTapVal, rightTapVal) : MIN(leftTapVal, rightTapVal);
-            joystick_status.axes[tapAxis] = maxTapVal;
-        }
-        else {
-            joystick_status.axes[tapAxis] = 0;
-        }
-    }
-    else {
+    // if both are pressed, ignore tap axis
+    if ((!useTapAxis1 && useTapAxis2) || (useTapAxis1 && !useTapAxis2)) {
+        int16_t leftTapVal            = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
+        int16_t rightTapVal           = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
+        int16_t maxTapVal             = useTapAxis1 ? MAX(leftTapVal, rightTapVal) : MIN(leftTapVal, rightTapVal);
+        joystick_status.axes[tapAxis] = maxTapVal;
+    } else {
         joystick_status.axes[tapAxis] = 0;
     }
     joystick_status.status |= JS_UPDATED;
 }
 
-void calibrateTriggers(bool mirror) {
+void calibrateTriggers(bool mirrorLeft, bool mirrorRight) {
     if (DO_CALIBRATE_ANALOG) {
         uint16_t calibrateTime = timer_elapsed(calibrateTimer);
         if (calibrateTime > 10000) {
@@ -146,20 +142,21 @@ void calibrateTriggers(bool mirror) {
             uprintf("R_TRIGGER_ZERO: %d\n", R_TRIGGER_ZERO);
             calibrateTimer = 0;
         }
-        int16_t leftTrigger = analogReadPin(LEFT_TRIGGER_PIN);
+        int16_t leftTrigger  = analogReadPin(LEFT_TRIGGER_PIN);
         int16_t rightTrigger = analogReadPin(RIGHT_TRIGGER_PIN);
-        if (mirror) {
+        if (mirrorLeft) {
             leftTrigger = 1023 - leftTrigger;
+        }
+        if (mirrorRight) {
             rightTrigger = 1023 - rightTrigger;
         }
         if (calibrateTime < 100) {
             // set zero values
             L_TRIGGER_ZERO = leftTrigger;
             R_TRIGGER_ZERO = rightTrigger;
-            L_TRIGGER_MIN = leftTrigger;
-            R_TRIGGER_MIN = leftTrigger;
-        }
-        else {
+            L_TRIGGER_MIN  = leftTrigger;
+            R_TRIGGER_MIN  = rightTrigger;
+        } else {
             if (leftTrigger > L_TRIGGER_MAX) {
                 L_TRIGGER_MAX = leftTrigger;
                 uprintf("L_TRIGGER_MAX: %d\n", L_TRIGGER_MAX);
