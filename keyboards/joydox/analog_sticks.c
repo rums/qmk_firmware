@@ -8,9 +8,9 @@
 #define QWIIC_JOYSTICK_RIGHT_ADDR (0x24 << 1)
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-uint16_t scan_timer     = 0;
-bool DO_CALIBRATE_ANALOG = false;
-uint16_t calibrateTimer = 0;
+uint16_t scan_timer          = 0;
+bool     DO_CALIBRATE_ANALOG = false;
+uint16_t calibrateTimer      = 0;
 
 int8_t applyCurve(int8_t value) {
     int8_t sign = value > 0 ? 1 : -1;
@@ -24,19 +24,19 @@ int8_t applyCurve(int8_t value) {
     return value;
 }
 
-int16_t mapToRange_analog(int16_t value, int16_t min, int16_t max, int8_t min_out , int8_t max_out) {
+int16_t mapToRange_analog(int16_t value, int16_t min, int16_t max, int8_t min_out, int8_t max_out) {
     double slope = 1.0 * (max_out - min_out) / (max - min);
     return MIN(ceil(slope * (value - min) + min_out), max_out);
 }
 
-struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero, bool mirror, uint16_t replaceYPos, uint16_t replaceYNeg) {
+struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero, bool mirror, struct analog_config config) {
     int16_t horizontal = analogReadPin(horizontalPin);
     int16_t vertical   = analogReadPin(verticalPin);
     if (mirror) {
         horizontal = 1023 - horizontal;
         vertical   = 1023 - vertical;
-        h_zero    = 1023 - h_zero;
-        v_zero    = 1023 - v_zero;
+        h_zero     = 1023 - h_zero;
+        v_zero     = 1023 - v_zero;
     }
 
     if (horizontal < h_min) horizontal = h_min;
@@ -56,23 +56,27 @@ struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8
         vertical_mapped = mapToRange_analog(vertical, v_min, v_zero - deadzone, -128, 0);
     }
 
-    if (joystick_status.axes[axis1] != horizontal_mapped) {
+    if (config.h_pos_button == -1 && joystick_status.axes[axis1] != horizontal_mapped) {
         joystick_status.axes[axis1] = horizontal_mapped;
         joystick_status.status |= JS_UPDATED;
+    } else if (horizontal_mapped > 40) {
+        register_joystick_button(config.h_pos_button);
+    } else if (horizontal_mapped < -40) {
+        register_joystick_button(config.h_neg_button);
+    } else {
+        unregister_joystick_button(config.h_neg_button);
+        unregister_joystick_button(config.h_pos_button);
     }
-    if (replaceYPos != 0 && vertical_mapped > 40) {
-        register_joystick_button(replaceYPos);
-    }
-    else if (replaceYNeg != 0 && vertical_mapped < -40) {
-        register_joystick_button(replaceYNeg);
-    }
-    else if (replaceYNeg != 0 && replaceYPos != 0) {
-        unregister_joystick_button(replaceYNeg);
-        unregister_joystick_button(replaceYPos);
-    }
-    else if (replaceYPos == 0 && joystick_status.axes[axis2] != vertical_mapped) {
+    if (config.v_pos_button == -1 && joystick_status.axes[axis2] != vertical_mapped) {
         joystick_status.axes[axis2] = vertical_mapped;
         joystick_status.status |= JS_UPDATED;
+    } else if (vertical_mapped > 40) {
+        register_joystick_button(config.v_pos_button);
+    } else if (vertical_mapped < -40) {
+        register_joystick_button(config.v_neg_button);
+    } else {
+        unregister_joystick_button(config.v_neg_button);
+        unregister_joystick_button(config.v_pos_button);
     }
 #ifdef CONSOLE_ENABLE
     if (timer_elapsed(scan_timer) > 200 && axis1 == 0) {
@@ -131,57 +135,57 @@ uint8_t scanJoystick_controller(int8_t joystickAddr, uint8_t axis1, uint8_t axis
     struct joystick_data joystickData = scanJoystick(joystickAddr, horizontalCurve);
     if (joystickData.success) {
 #    ifdef CONSOLE_ENABLE
-    bool axesChanged = false;
+        bool axesChanged = false;
 #    endif
-    if (joystick_status.axes[axis1] != joystickData.horizontal) {
+        if (joystick_status.axes[axis1] != joystickData.horizontal) {
             joystick_status.axes[axis1] = joystickData.horizontal;
             joystick_status.status |= JS_UPDATED;
 #    ifdef CONSOLE_ENABLE
-        axesChanged = true;
+            axesChanged = true;
 #    endif
-    }
+        }
         if (joystick_status.axes[axis2] != joystickData.vertical) {
             joystick_status.axes[axis2] = joystickData.vertical;
             joystick_status.status |= JS_UPDATED;
 #    ifdef CONSOLE_ENABLE
-        axesChanged = true;
+            axesChanged = true;
 #    endif
-    }
+        }
 #    ifdef CONSOLE_ENABLE
-    if (axesChanged) {
+        if (axesChanged) {
             // uprintf("%d h: %d \t\t %d v: %d\n", joystickAddr, joystickData.horizontal, joystickAddr, joystickData.vertical);
         }
 #    endif
-    nDevices++;
+        nDevices++;
     }
     return nDevices;
 }
 #endif
 
-uint16_t L_H_MIN = 1023;
-uint16_t L_H_MAX = 0;
-uint16_t L_V_MIN = 1023;
-uint16_t L_V_MAX = 0;
+uint16_t L_H_MIN    = 1023;
+uint16_t L_H_MAX    = 0;
+uint16_t L_V_MIN    = 1023;
+uint16_t L_V_MAX    = 0;
 uint16_t L_DEADZONE = 10;
-uint16_t L_H_ZERO = 512;
-uint16_t L_V_ZERO = 512;
-uint16_t R_H_MIN = 1023;
-uint16_t R_H_MAX = 0;
-uint16_t R_V_MIN = 1023;
-uint16_t R_V_MAX = 0;
+uint16_t L_H_ZERO   = 512;
+uint16_t L_V_ZERO   = 512;
+uint16_t R_H_MIN    = 1023;
+uint16_t R_H_MAX    = 0;
+uint16_t R_V_MIN    = 1023;
+uint16_t R_V_MAX    = 0;
 uint16_t R_DEADZONE = 30;
-uint16_t R_H_ZERO = 512;
-uint16_t R_V_ZERO = 512;
+uint16_t R_H_ZERO   = 512;
+uint16_t R_V_ZERO   = 512;
 
-void scanJoysticks(uint16_t replaceRYPos, uint16_t replaceRYNeg, bool mirrorLeft, bool mirrorRight) {
-    if (replaceRYNeg == 0 && replaceRYPos == 0) {
-        scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, 0, 0);
-        scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, 0, 0);
-    } else {
-        scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, 0, 0);
-        scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, replaceRYPos, replaceRYNeg);
-    }
+void scanJoysticks(struct analog_config left_analog_config, struct analog_config right_analog_config, bool mirrorLeft, bool mirrorRight) {
+    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, left_analog_config.h_axis, left_analog_config.v_axis, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, left_analog_config);
+    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, right_analog_config.h_axis, right_analog_config.v_axis, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, right_analog_config);
 }
+
+// void scanJoysticksWithReplace(uint16_t replaceRYPos, uint16_t replaceRYNeg, bool mirrorLeft, bool mirrorRight) {
+//     scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, 0, 1, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, 0, 0);
+//     scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, 2, 3, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, replaceRYPos, replaceRYNeg);
+// }
 
 void calibrateJoysticks(bool mirrorLeft, bool mirrorRight) {
     if (DO_CALIBRATE_ANALOG) {
@@ -202,18 +206,17 @@ void calibrateJoysticks(bool mirrorLeft, bool mirrorRight) {
             uprintf("R_V_MAX: %d\n", R_V_MAX);
             calibrateTimer = 0;
         }
-        int16_t leftHorizontal = mirrorLeft ? 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL) : analogReadPin(LEFT_ANALOG_HORIZONTAL);
-        int16_t leftVertical = mirrorLeft ? 1023 - analogReadPin(LEFT_ANALOG_VERTICAL) : analogReadPin(LEFT_ANALOG_VERTICAL);
+        int16_t leftHorizontal  = mirrorLeft ? 1023 - analogReadPin(LEFT_ANALOG_HORIZONTAL) : analogReadPin(LEFT_ANALOG_HORIZONTAL);
+        int16_t leftVertical    = mirrorLeft ? 1023 - analogReadPin(LEFT_ANALOG_VERTICAL) : analogReadPin(LEFT_ANALOG_VERTICAL);
         int16_t rightHorizontal = mirrorRight ? 1023 - analogReadPin(RIGHT_ANALOG_HORIZONTAL) : analogReadPin(RIGHT_ANALOG_HORIZONTAL);
-        int16_t rightVertical = mirrorRight ? 1023 - analogReadPin(RIGHT_ANALOG_VERTICAL) : analogReadPin(RIGHT_ANALOG_VERTICAL);
+        int16_t rightVertical   = mirrorRight ? 1023 - analogReadPin(RIGHT_ANALOG_VERTICAL) : analogReadPin(RIGHT_ANALOG_VERTICAL);
         if (calibrateTime < 100) {
             // set zero values
             L_H_ZERO = leftHorizontal;
             L_V_ZERO = leftVertical;
             R_H_ZERO = rightHorizontal;
             R_V_ZERO = rightVertical;
-        }
-        else {
+        } else {
             // set min and max values
             if (leftHorizontal < L_H_MIN) {
                 L_H_MIN = leftHorizontal;

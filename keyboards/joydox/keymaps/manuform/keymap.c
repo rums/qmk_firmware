@@ -39,11 +39,11 @@ i2c_status_t i2c_start_bodge(uint8_t address, uint16_t timeout) {
 #endif
 
 // Defines names for use in layer keycodes and the keymap
-enum layer_names { _JOYSTICK_RL, _JOYSTICK_RL_BETA, _JOYSTICK_VANILLA, _WASD_GAMING };
+enum layer_names { _JOYSTICK_RL, _JOYSTICK_RL_BETA, _JOYSTICK_VANILLA, _JOYSTICK_FIGHTSTICK, _WASD_GAMING };
 
 // Defines the ke
 // ycodes used by our macros in process_record_user
-enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, ANALOG_AIR, ANALOG_AIR_LEFT, ANALOG_AIR_RIGHT, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS };
+enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, ANALOG_AIR, ANALOG_AIR_LEFT, ANALOG_AIR_RIGHT, AIR_LEFT, AIR_RIGHT, AIR_ROLL, JOYSTICK_LT_TOGGLE, CALIBRATE_JOYSTICKS, XBOX_LT, XBOX_RT };
 
 // enum controller_mappings { XBOX_A = 3, XBOX_B = 19, XBOX_X = 7, XBOX_Y = 9, XBOX_LB = 2, XBOX_RB = 4, XBOX_BACK = 10, XBOX_START = 14, XBOX_LS = 1, XBOX_RS = 8, XBOX_UP = 17, XBOX_DOWN = 18, XBOX_LEFT = 11, XBOX_RIGHT = 12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
 // enum controller_mappings { XBOX_A = JS_BUTTON3, XBOX_B = JS_BUTTON19, XBOX_X = JS_BUTTON7, XBOX_Y = JS_BUTTON9, XBOX_LB = JS_BUTTON2, XBOX_RB = JS_BUTTON4, XBOX_BACK = JS_BUTTON10, XBOX_START = JS_BUTTON14, XBOX_LS = JS_BUTTON1, XBOX_RS = JS_BUTTON8, XBOX_UP = JS_BUTTON17, XBOX_DOWN = JS_BUTTON18, XBOX_LEFT = JS_BUTTON11, XBOX_RIGHT = JS_BUTTON12, XBOX_LT_TOG = JOYSTICK_LT_TOGGLE };
@@ -70,6 +70,55 @@ enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, ANALOG_AIR, ANALOG_AIR_LEFT, 
 //     )
 // };
 
+struct analog_config default_left_analog_config = {
+    .h_axis = 0,
+    .v_axis = 1,
+    .h_pos_button = -1,
+    .h_neg_button = -1,
+    .v_pos_button = -1,
+    .v_neg_button = -1,
+};
+struct analog_config default_right_analog_config = {
+    .h_axis = 2,
+    .v_axis = 3,
+    .h_pos_button = -1,
+    .h_neg_button = -1,
+    .v_pos_button = -1,
+    .v_neg_button = -1,
+};
+struct analog_config rl_left_analog_config = {
+    .h_axis = 0,
+    .v_axis = 1,
+    .h_pos_button = -1,
+    .h_neg_button = -1,
+    .v_pos_button = -1,
+    .v_neg_button = -1,
+};
+struct analog_config rl_right_analog_config = {
+    .h_axis = 2,
+    .v_axis = 3,
+    .h_pos_button = -1,
+    .h_neg_button = -1,
+    .v_pos_button = BUTTON(XBOX_DOWN),
+    .v_neg_button = BUTTON(XBOX_UP),
+};
+struct analog_config fightstick_left_analog_config = {
+    .h_axis = 0,
+    .v_axis = 1,
+    .h_pos_button = -1,
+    .h_neg_button = -1,
+    .v_pos_button = -1,
+    .v_neg_button = -1,
+};
+struct analog_config fightstick_right_analog_config = {
+    .h_axis = 2,
+    .v_axis = 3,
+    .h_pos_button = -1,
+    .h_neg_button = -1,
+    .v_pos_button = -1,
+    .v_neg_button = -1,
+};
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
         KC_1,      KC_2,              XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,             TO(_JOYSTICK_VANILLA),
@@ -82,10 +131,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     //     XBOX_LEFT, XBOX_RIGHT, WD_MANUAL,                    XBOX_X, PS_AIR,    XBOX_Y,
     //     XBOX_BACK, XBOX_START,                                        XBOX_LB,   XBOX_RB),
     [_JOYSTICK_VANILLA] = LAYOUT(
-        KC_1, KC_2, XBOX_RB, XBOX_A,   XBOX_B, KC_3, KC_4, TO(_JOYSTICK_RL),
+        KC_1, KC_2, XBOX_RB, XBOX_A,   XBOX_B, KC_3, KC_4, TO(_JOYSTICK_FIGHTSTICK),
         XBOX_LB, XBOX_X, XBOX_A,       XBOX_B, XBOX_Y, XBOX_RB,
         XBOX_LEFT, XBOX_RIGHT, XBOX_LS,  XBOX_RS, XBOX_UP, XBOX_DOWN,
         CALIBRATE_JOYSTICKS, XBOX_BACK,           XBOX_START, RESET),
+    [_JOYSTICK_FIGHTSTICK] = LAYOUT(
+        KC_1, KC_2, XBOX_RB, TO(_JOYSTICK_RL),   XBOX_B, XBOX_LS, XBOX_RS, XBOX_RT,
+        XBOX_LEFT, XBOX_UP, XBOX_RIGHT,       XBOX_X, XBOX_Y, XBOX_RB,
+        XBOX_LEFT, XBOX_DOWN, XBOX_LT,  XBOX_A, XBOX_B, XBOX_LB,
+        XBOX_BACK, XBOX_START,           XBOX_LS, XBOX_LB),
     // [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_W, KC_U, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, CALIBRATE_JOYSTICKS, RESET)
     };
 
@@ -96,12 +150,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 bool USE_TAP_AXIS_1 = false;
 bool USE_TAP_AXIS_2 = false;
+
 bool process_joystick_analogread() {
     calibrateJoysticks(false, false);
     calibrateTriggers(false, false);
-    scanJoysticks(IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_DOWN) : 0, IS_LAYER_ON(_JOYSTICK_RL) ? BUTTON(XBOX_UP) : 0, false, false);
-    // scanJoysticks(BUTTON(XBOX_DOWN), BUTTON(XBOX_UP));
-    scanTriggers(IS_LAYER_ON(_WASD_GAMING), 4, 5, 3, USE_TAP_AXIS_1, USE_TAP_AXIS_2, false, false);
+    if (IS_LAYER_ON(_JOYSTICK_RL)) {
+        scanJoysticks(rl_left_analog_config, rl_right_analog_config, false, false);
+    } else if (IS_LAYER_ON(_JOYSTICK_FIGHTSTICK)) {
+        scanJoysticks(fightstick_left_analog_config, fightstick_right_analog_config, false, false);
+    } else {
+        scanJoysticks(default_left_analog_config, default_right_analog_config, false, false);
+    }
+    if (IS_LAYER_ON(_JOYSTICK_RL) || IS_LAYER_ON(_JOYSTICK_VANILLA)) {
+        scanTriggers(IS_LAYER_ON(_WASD_GAMING), 4, 5, 3, USE_TAP_AXIS_1, USE_TAP_AXIS_2, false, false);
+    }
     return true;
 }
 
@@ -259,6 +321,24 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                DO_CALIBRATE_ANALOG = true;
                calibrateTimer = timer_read();
+            }
+            return false;
+        case XBOX_LT:
+            if (record->event.pressed) {
+                joystick_status.axes[4] = 127;
+                joystick_status.status |= JS_UPDATED;
+            } else {
+                joystick_status.axes[4] = -128;
+                joystick_status.status |= JS_UPDATED;
+            }
+            return false;
+        case XBOX_RT:
+            if (record->event.pressed) {
+                joystick_status.axes[5] = 127;
+                joystick_status.status |= JS_UPDATED;
+            } else {
+                joystick_status.axes[5] = -128;
+                joystick_status.status |= JS_UPDATED;
             }
             return false;
     }

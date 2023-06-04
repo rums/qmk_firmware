@@ -36,7 +36,7 @@ int16_t mapToRange_trigger(int16_t value, int16_t min, int16_t max, int8_t min_o
 }
 
 // int16_t debugTimer = 0;
-uint16_t getTriggerValue(uint8_t triggerPin, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, uint8_t minOutput, uint8_t maxOutput, bool mirror) {
+uint16_t getTriggerValue(uint8_t triggerPin, uint16_t axisZero, uint16_t minInput, uint16_t maxInput, uint8_t minOutput, uint8_t maxOutput, bool mirror, uint16_t deadzone) {
     int32_t rawVal = analogReadPin(triggerPin);
     // if (timer_elapsed(debugTimer) > 1000) {
     //     uprintf("triggerPin: %d, rawVal: %d\n", triggerPin, rawVal);
@@ -112,8 +112,10 @@ int16_t smoothAnalog(int32_t readPin) {
 }
 
 void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis1, bool useTapAxis2, bool mirrorLeft, bool mirrorRight) {
-    int16_t leftTrigVal         = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN, L_TRIGGER_MAX, -128, 127, mirrorLeft);
-    int16_t rightTrigVal        = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN, R_TRIGGER_MAX, -128, 127, mirrorRight);
+    uint16_t leftDeadzone  = 10;
+    uint16_t rightDeadzone = 10;
+    int16_t leftTrigVal         = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN + leftDeadzone, L_TRIGGER_MAX, -128, 127, mirrorLeft, leftDeadzone);
+    int16_t rightTrigVal        = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN + rightDeadzone, R_TRIGGER_MAX, -128, 127, mirrorRight, rightDeadzone);
     joystick_status.axes[axis1] = leftTrigVal;
     joystick_status.axes[axis2] = rightTrigVal;
     // if both are pressed, ignore tap axis
