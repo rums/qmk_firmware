@@ -26,13 +26,14 @@ int8_t applyCurve(int8_t value) {
 
 int16_t mapToRange_analog(int16_t value, int16_t min, int16_t max, int8_t min_out, int8_t max_out) {
     double slope = 1.0 * (max_out - min_out) / (max - min);
-    return MIN(ceil(slope * (value - min) + min_out), max_out);
+    return (int16_t)(slope * (value - min) + min_out);
 }
 
-struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, uint8_t axis1, uint8_t axis2, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero, bool mirror, struct analog_config config) {
-    int16_t horizontal = analogReadPin(horizontalPin);
-    int16_t vertical   = analogReadPin(verticalPin);
-    if (mirror) {
+struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8_t verticalPin, struct analog_config config, uint16_t h_min, uint16_t h_max, uint16_t v_min, uint16_t v_max, uint8_t deadzone, uint16_t h_zero, uint16_t v_zero) {
+    int16_t horizontal             = analogReadPin(horizontalPin);
+    int16_t vertical               = analogReadPin(verticalPin);
+    bool    update_joystick_status = false;
+    if (config.mirror_axes) {
         horizontal = 1023 - horizontal;
         vertical   = 1023 - vertical;
         h_zero     = 1023 - h_zero;
@@ -45,41 +46,93 @@ struct joystick_data scanJoystick_controller_analog(uint8_t horizontalPin, uint8
     if (vertical > v_max) vertical = v_max;
     int8_t horizontal_mapped = 0;
     int8_t vertical_mapped   = 0;
-    if (horizontal >= h_zero + deadzone) {
-        horizontal_mapped = mapToRange_analog(horizontal, h_zero + deadzone, h_max, 0, 127);
-    } else if (horizontal <= h_zero - deadzone) {
-        horizontal_mapped = mapToRange_analog(horizontal, h_min, h_zero - deadzone, -128, 0);
+    bool   is_split_h_axis   = false;
+    bool   is_split_v_axis   = false;
+    // h axis
+    if (config.h_enabled) {
+        if (config.split_h_axis) {
+            if (horizontal >= h_zero + deadzone) {
+                horizontal_mapped = mapToRange_analog(horizontal, h_zero + deadzone, h_max, -128, 127);
+                is_split_h_axis   = true;
+            } else if (horizontal <= h_zero - deadzone) {
+                horizontal_mapped = mapToRange_analog(horizontal, h_zero - deadzone, h_min, -128, 127);
+            } else {
+                horizontal_mapped = -128;
+            }
+        } else {
+            if (horizontal >= h_zero + deadzone) {
+                horizontal_mapped = mapToRange_analog(horizontal, h_zero + deadzone, h_max, 0, 127);
+            } else if (horizontal <= h_zero - deadzone) {
+                horizontal_mapped = mapToRange_analog(horizontal, h_min, h_zero - deadzone, -128, 0);
+            }
+        }
+        if (config.h_pos_button == -1 && (joystick_status.axes[config.h_axis] != horizontal_mapped || joystick_status.axes[config.h_axis_split] != horizontal_mapped)) {
+            if (!config.h_axis_split) {
+                joystick_status.axes[config.h_axis] = horizontal_mapped;
+                update_joystick_status              = true;
+            } else if (is_split_h_axis) {
+                joystick_status.axes[config.h_axis]       = -128;
+                joystick_status.axes[config.h_axis_split] = horizontal_mapped;
+                update_joystick_status                    = true;
+            } else {
+                joystick_status.axes[config.h_axis_split] = -128;
+                joystick_status.axes[config.h_axis]       = horizontal_mapped;
+                update_joystick_status                    = true;
+            }
+        } else if (horizontal_mapped > config.button_cutoff) {
+            register_joystick_button(config.h_pos_button);
+        } else if (horizontal_mapped < -config.button_cutoff) {
+            register_joystick_button(config.h_neg_button);
+        } else {
+            unregister_joystick_button(config.h_neg_button);
+            unregister_joystick_button(config.h_pos_button);
+        }
     }
-    if (vertical >= v_zero + deadzone) {
-        vertical_mapped = mapToRange_analog(vertical, v_zero + deadzone, v_max, 0, 127);
-    } else if (vertical <= v_zero - deadzone) {
-        vertical_mapped = mapToRange_analog(vertical, v_min, v_zero - deadzone, -128, 0);
+    // v axis
+    if (config.v_enabled) {
+        if (config.split_v_axis) {
+            if (vertical >= v_zero + deadzone) {
+                vertical_mapped = mapToRange_analog(vertical, v_zero + deadzone, v_max, -128, 127);
+                is_split_v_axis = true;
+            } else if (vertical <= v_zero - deadzone) {
+                vertical_mapped = mapToRange_analog(vertical, v_min, v_zero - deadzone, -128, 127);
+            } else {
+                vertical_mapped = -128;
+            }
+        } else {
+            if (vertical >= v_zero + deadzone) {
+                vertical_mapped = mapToRange_analog(vertical, v_zero + deadzone, v_max, 0, 127);
+            } else if (vertical <= v_zero - deadzone) {
+                vertical_mapped = mapToRange_analog(vertical, v_min, v_zero - deadzone, -128, 0);
+            }
+        }
+        if (config.v_pos_button == -1 && (joystick_status.axes[config.v_axis] != vertical_mapped || joystick_status.axes[config.v_axis_split] != vertical_mapped)) {
+            if (!config.v_axis_split) {
+                joystick_status.axes[config.v_axis] = vertical_mapped;
+                update_joystick_status              = true;
+            } else if (is_split_v_axis) {
+                joystick_status.axes[config.v_axis]       = -128;
+                joystick_status.axes[config.v_axis_split] = vertical_mapped;
+                update_joystick_status                    = true;
+            } else {
+                joystick_status.axes[config.v_axis_split] = -128;
+                joystick_status.axes[config.v_axis]       = vertical_mapped;
+                update_joystick_status                    = true;
+            }
+        } else if (vertical_mapped > config.button_cutoff) {
+            register_joystick_button(config.v_pos_button);
+        } else if (vertical_mapped < -config.button_cutoff) {
+            register_joystick_button(config.v_neg_button);
+        } else {
+            unregister_joystick_button(config.v_neg_button);
+            unregister_joystick_button(config.v_pos_button);
+        }
     }
-
-    if (config.h_pos_button == -1 && joystick_status.axes[axis1] != horizontal_mapped) {
-        joystick_status.axes[axis1] = horizontal_mapped;
+    if (update_joystick_status) {
         joystick_status.status |= JS_UPDATED;
-    } else if (horizontal_mapped > 40) {
-        register_joystick_button(config.h_pos_button);
-    } else if (horizontal_mapped < -40) {
-        register_joystick_button(config.h_neg_button);
-    } else {
-        unregister_joystick_button(config.h_neg_button);
-        unregister_joystick_button(config.h_pos_button);
-    }
-    if (config.v_pos_button == -1 && joystick_status.axes[axis2] != vertical_mapped) {
-        joystick_status.axes[axis2] = vertical_mapped;
-        joystick_status.status |= JS_UPDATED;
-    } else if (vertical_mapped > 40) {
-        register_joystick_button(config.v_pos_button);
-    } else if (vertical_mapped < -40) {
-        register_joystick_button(config.v_neg_button);
-    } else {
-        unregister_joystick_button(config.v_neg_button);
-        unregister_joystick_button(config.v_pos_button);
     }
 #ifdef CONSOLE_ENABLE
-    if (timer_elapsed(scan_timer) > 200 && axis1 == 0) {
+    if (timer_elapsed(scan_timer) > 200 && config.h_axis == 0) {
         // uprintf("h: %d\t", horizontal);
         // uprintf("h: %d\t\t", horizontal_mapped);
         // uprintf("v: %d\t", vertical);
@@ -177,9 +230,9 @@ uint16_t R_DEADZONE = 30;
 uint16_t R_H_ZERO   = 512;
 uint16_t R_V_ZERO   = 512;
 
-void scanJoysticks(struct analog_config left_analog_config, struct analog_config right_analog_config, bool mirrorLeft, bool mirrorRight) {
-    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, left_analog_config.h_axis, left_analog_config.v_axis, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO, mirrorLeft, left_analog_config);
-    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, right_analog_config.h_axis, right_analog_config.v_axis, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO, mirrorRight, right_analog_config);
+void scanJoysticks(struct analog_config left_analog_config, struct analog_config right_analog_config) {
+    scanJoystick_controller_analog(LEFT_ANALOG_HORIZONTAL, LEFT_ANALOG_VERTICAL, left_analog_config, L_H_MIN + L_DEADZONE, L_H_MAX - L_DEADZONE, L_V_MIN + L_DEADZONE, L_V_MAX - L_DEADZONE, L_DEADZONE, L_H_ZERO, L_V_ZERO);
+    scanJoystick_controller_analog(RIGHT_ANALOG_HORIZONTAL, RIGHT_ANALOG_VERTICAL, right_analog_config, R_H_MIN + R_DEADZONE, R_H_MAX - R_DEADZONE, R_V_MIN + R_DEADZONE, R_V_MAX - R_DEADZONE, R_DEADZONE, R_H_ZERO, R_V_ZERO);
 }
 
 // void scanJoysticksWithReplace(uint16_t replaceRYPos, uint16_t replaceRYNeg, bool mirrorLeft, bool mirrorRight) {

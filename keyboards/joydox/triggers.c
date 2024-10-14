@@ -112,20 +112,22 @@ int16_t smoothAnalog(int32_t readPin) {
 }
 
 void scanTriggers(bool wasdMode, uint8_t axis1, uint8_t axis2, uint8_t tapAxis, bool useTapAxis1, bool useTapAxis2, bool mirrorLeft, bool mirrorRight) {
-    uint16_t leftDeadzone  = 10;
-    uint16_t rightDeadzone = 10;
-    int16_t leftTrigVal         = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN + leftDeadzone, L_TRIGGER_MAX, -128, 127, mirrorLeft, leftDeadzone);
-    int16_t rightTrigVal        = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN + rightDeadzone, R_TRIGGER_MAX, -128, 127, mirrorRight, rightDeadzone);
+    uint16_t leftDeadzone       = 10;
+    uint16_t rightDeadzone      = 10;
+    int16_t  leftTrigVal        = getTriggerValue(LEFT_TRIGGER_PIN, L_TRIGGER_ZERO, L_TRIGGER_MIN + leftDeadzone, L_TRIGGER_MAX, -128, 127, mirrorLeft, leftDeadzone);
+    int16_t  rightTrigVal       = getTriggerValue(RIGHT_TRIGGER_PIN, R_TRIGGER_ZERO, R_TRIGGER_MIN + rightDeadzone, R_TRIGGER_MAX, -128, 127, mirrorRight, rightDeadzone);
     joystick_status.axes[axis1] = leftTrigVal;
     joystick_status.axes[axis2] = rightTrigVal;
     // if both are pressed, ignore tap axis
-    if ((!useTapAxis1 && useTapAxis2) || (useTapAxis1 && !useTapAxis2)) {
-        int16_t leftTapVal            = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
-        int16_t rightTapVal           = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
-        int16_t maxTapVal             = useTapAxis1 ? MAX(leftTapVal, rightTapVal) : MIN(leftTapVal, rightTapVal);
-        joystick_status.axes[tapAxis] = maxTapVal;
-    } else {
-        joystick_status.axes[tapAxis] = 0;
+    if (tapAxis != -1) {
+        if ((!useTapAxis1 && useTapAxis2) || (useTapAxis1 && !useTapAxis2)) {
+            int16_t leftTapVal            = mapToRange_trigger(leftTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
+            int16_t rightTapVal           = mapToRange_trigger(rightTrigVal, -128, 127, 0, useTapAxis1 ? 127 : -128);
+            int16_t maxTapVal             = useTapAxis1 ? MAX(leftTapVal, rightTapVal) : MIN(leftTapVal, rightTapVal);
+            joystick_status.axes[tapAxis] = maxTapVal;
+        } else {
+            joystick_status.axes[tapAxis] = 0;
+        }
     }
     joystick_status.status |= JS_UPDATED;
 }

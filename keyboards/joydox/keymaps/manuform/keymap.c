@@ -71,6 +71,8 @@ enum custom_keycodes { WD = SAFE_RANGE, WD_MANUAL, ANALOG_AIR, ANALOG_AIR_LEFT, 
 // };
 
 struct analog_config default_left_analog_config = {
+    .h_enabled = true,
+    .v_enabled = true,
     .h_axis = 0,
     .v_axis = 1,
     .h_pos_button = -1,
@@ -79,6 +81,8 @@ struct analog_config default_left_analog_config = {
     .v_neg_button = -1,
 };
 struct analog_config default_right_analog_config = {
+    .h_enabled = true,
+    .v_enabled = true,
     .h_axis = 2,
     .v_axis = 3,
     .h_pos_button = -1,
@@ -87,22 +91,30 @@ struct analog_config default_right_analog_config = {
     .v_neg_button = -1,
 };
 struct analog_config rl_left_analog_config = {
+    .h_enabled = true,
+    .v_enabled = true,
     .h_axis = 0,
     .v_axis = 1,
     .h_pos_button = -1,
     .h_neg_button = -1,
     .v_pos_button = -1,
     .v_neg_button = -1,
+    .button_cutoff = 40,
 };
 struct analog_config rl_right_analog_config = {
+    .h_enabled = true,
+    .v_enabled = true,
     .h_axis = 2,
     .v_axis = 3,
     .h_pos_button = -1,
     .h_neg_button = -1,
     .v_pos_button = BUTTON(XBOX_DOWN),
     .v_neg_button = BUTTON(XBOX_UP),
+    .button_cutoff = 40,
 };
 struct analog_config fightstick_left_analog_config = {
+    .h_enabled = true,
+    .v_enabled = true,
     .h_axis = 0,
     .v_axis = 1,
     .h_pos_button = -1,
@@ -111,7 +123,11 @@ struct analog_config fightstick_left_analog_config = {
     .v_neg_button = -1,
 };
 struct analog_config fightstick_right_analog_config = {
-    .h_axis = 2,
+    .h_enabled = true,
+    .v_enabled = true,
+    .split_h_axis = true,
+    .h_axis = 4,
+    .h_axis_split = 5,
     .v_axis = 3,
     .h_pos_button = -1,
     .h_neg_button = -1,
@@ -121,10 +137,10 @@ struct analog_config fightstick_right_analog_config = {
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_JOYSTICK_RL] = LAYOUT(
-        KC_1,      KC_2,              XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,             TO(_JOYSTICK_VANILLA),
+        KC_1,      KC_2,              XBOX_RB, XBOX_RB,     WD_MANUAL,  KC_3,    KC_4,             TO(_JOYSTICK_VANILLA),
         XBOX_B,   ANALOG_AIR_LEFT,   XBOX_A,                             XBOX_X,  ANALOG_AIR_RIGHT,          XBOX_Y,
         XBOX_LB, XBOX_LS,            WD_MANUAL,                          WD_MANUAL,  XBOX_RS, XBOX_Y,
-        XBOX_BACK, XBOX_START,                                            XBOX_LB,   XBOX_RB),
+        XBOX_BACK, XBOX_START,                                            XBOX_LB,   CALIBRATE_JOYSTICKS),
     // [_JOYSTICK_RL_BETA] = LAYOUT(
     //     KC_1,      KC_2,       XBOX_RB, WD_MANUAL,     WD_MANUAL,  KC_3,    KC_4,      TO(_JOYSTICK_VANILLA),
     //     XBOX_LB,   AIR_LEFT,   XBOX_A,                       XBOX_X,  AIR_RIGHT, XBOX_Y,
@@ -136,10 +152,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         XBOX_LEFT, XBOX_RIGHT, XBOX_LS,  XBOX_RS, XBOX_UP, XBOX_DOWN,
         CALIBRATE_JOYSTICKS, XBOX_BACK,           XBOX_START, RESET),
     [_JOYSTICK_FIGHTSTICK] = LAYOUT(
-        KC_1, KC_2, XBOX_RB, TO(_JOYSTICK_RL),   XBOX_B, XBOX_LS, XBOX_RS, XBOX_RT,
+        KC_1, KC_2, XBOX_RS, TO(_JOYSTICK_RL),   XBOX_B, XBOX_LS, XBOX_LT, XBOX_RT,
         XBOX_LEFT, XBOX_UP, XBOX_RIGHT,       XBOX_X, XBOX_Y, XBOX_RB,
-        XBOX_LEFT, XBOX_DOWN, XBOX_LT,  XBOX_A, XBOX_B, XBOX_LB,
-        XBOX_BACK, XBOX_START,           XBOX_LS, XBOX_LB),
+        XBOX_LEFT, XBOX_DOWN, XBOX_RIGHT,  XBOX_A, XBOX_B, XBOX_LB,
+        XBOX_BACK, XBOX_START,           XBOX_LS, TO(_JOYSTICK_RL)),
     // [_WASD_GAMING] = LAYOUT(KC_TAB, KC_Q, KC_W, KC_W, KC_U, KC_U, KC_I, TO(_JOYSTICK_RL), KC_LSHIFT, KC_A, KC_S, KC_J, KC_K, KC_L, KC_LCTRL, KC_Z, KC_X, KC_M, KC_N, KC_I, KC_T, KC_G, CALIBRATE_JOYSTICKS, RESET)
     };
 
@@ -155,14 +171,16 @@ bool process_joystick_analogread() {
     calibrateJoysticks(false, false);
     calibrateTriggers(false, false);
     if (IS_LAYER_ON(_JOYSTICK_RL)) {
-        scanJoysticks(rl_left_analog_config, rl_right_analog_config, false, false);
+        scanJoysticks(rl_left_analog_config, rl_right_analog_config);
     } else if (IS_LAYER_ON(_JOYSTICK_FIGHTSTICK)) {
-        scanJoysticks(fightstick_left_analog_config, fightstick_right_analog_config, false, false);
+        scanJoysticks(fightstick_left_analog_config, fightstick_right_analog_config);
     } else {
-        scanJoysticks(default_left_analog_config, default_right_analog_config, false, false);
+        scanJoysticks(default_left_analog_config, default_right_analog_config);
     }
-    if (IS_LAYER_ON(_JOYSTICK_RL) || IS_LAYER_ON(_JOYSTICK_VANILLA)) {
+    if (IS_LAYER_ON(_JOYSTICK_RL)) {
         scanTriggers(IS_LAYER_ON(_WASD_GAMING), 4, 5, 3, USE_TAP_AXIS_1, USE_TAP_AXIS_2, false, false);
+    } else if (IS_LAYER_ON(_JOYSTICK_VANILLA)) {
+        scanTriggers(IS_LAYER_ON(_WASD_GAMING), 4, 5, -1, false, false, false, false);
     }
     return true;
 }
@@ -325,18 +343,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case XBOX_LT:
             if (record->event.pressed) {
+                fightstick_right_analog_config.h_enabled = false;
                 joystick_status.axes[4] = 127;
                 joystick_status.status |= JS_UPDATED;
             } else {
+                fightstick_right_analog_config.h_enabled = true;
                 joystick_status.axes[4] = -128;
                 joystick_status.status |= JS_UPDATED;
             }
             return false;
         case XBOX_RT:
             if (record->event.pressed) {
+                fightstick_right_analog_config.h_enabled = false;
                 joystick_status.axes[5] = 127;
                 joystick_status.status |= JS_UPDATED;
             } else {
+                fightstick_right_analog_config.h_enabled = true;
                 joystick_status.axes[5] = -128;
                 joystick_status.status |= JS_UPDATED;
             }
